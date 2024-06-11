@@ -2,7 +2,7 @@ import numpy as np
 
 from continuum import *
 from lattice import *
-from band_data import *
+from grid_data import *
 from model import *
 
 class SuperlatticeModel(Model):
@@ -38,7 +38,7 @@ class SuperlatticeModel(Model):
         hamiltonians = np.array([[self.hamiltonian(k) for k in row] for row in points])
         eigvals, eigvecs = np.linalg.eigh(hamiltonians)
 
-        return BandData(self.lattice.trans / divisions, points, eigvals, eigvecs, divisions)
+        return GridData(self.lattice.trans / divisions, points, eigvals, eigvecs, divisions)
 
 # gated Bernal BG model with triangular lattice potential
 class BasicModel(SuperlatticeModel):

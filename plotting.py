@@ -38,12 +38,12 @@ def plot_bandstructure(model, n, ax):
     for t in hs_ts:
         ax.axvline(x=t, ls=':', c='k')
 
-def plot_bz(data, arr, fig, ax):
+def plot_gd(data, arr, fig, ax):
     mesh = ax.pcolormesh(data.points[...,0], data.points[...,1], arr)
     fig.colorbar(mesh, ax=ax)
 
-def plot_berry_curvature(data, band, fig, ax):
-    plot_bz(data, data.berry_curvature(band), fig, ax)
+def plot_gd_berry_curvature(data, band, fig, ax):
+    plot_gd(data, data.berry_curvature(band), fig, ax)
 
-def plot_quantum_metric_det(data, band, fig, ax):
-    plot_bz(data, np.linalg.det(data.quantum_metric(band)), fig, ax)
+def plot_gd_quantum_metric_det(data, band, fig, ax):
+    plot_gd(data, np.linalg.det(data.quantum_metric(band)), fig, ax)

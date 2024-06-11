@@ -1,6 +1,6 @@
 import numpy as np
 
-class BandData:
+class GridData:
     def __init__(self, trans, points, eigvals, eigvecs, divisions):
         self.trans = trans
         self.points = points
