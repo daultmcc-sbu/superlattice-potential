@@ -9,12 +9,12 @@ class Lattice:
         self.hs_points = hs_points
 
     def point_at(self, ind):
-        # return ind[0] * self.a1 + ind[1] * self.a2
         return self.trans @ ind
     
     def is_adjacent(self, ind1, ind2):
         diff = ind2 - ind1
         return np.any(np.all(diff == self.adjacents, axis=1))
+
     
 class TriangularLattice(Lattice):
     def __init__(self, a):
@@ -57,7 +57,3 @@ class SquareLattice(Lattice):
             for pt in partial_lattice:
                 full_lattice.append(np.linalg.matrix_power(rot, t) @ pt)
         return full_lattice
-    
-# class SquareLattice(RectangularLattice):
-#     def __init__(self, a):
-#         super().__init__(a, a)

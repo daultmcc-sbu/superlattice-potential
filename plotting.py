@@ -38,6 +38,18 @@ def plot_bandstructure(model, n, ax):
     for t in hs_ts:
         ax.axvline(x=t, ls=':', c='k')
 
+def plot_bz(model, f, n, fig, ax, zoom=0.5, blur=True):
+    next_gamma = np.abs(model.lattice.trans @ np.array([1,1]))
+    x = np.linspace(-zoom * next_gamma[0], zoom * next_gamma[0], n)
+    y = np.linspace(-zoom * next_gamma[1], zoom * next_gamma[1], n)
+    xv, yv = np.meshgrid(x,y)
+    z = np.zeros((n,n))
+    for i in range(n):
+        for j in range(n):
+            z[i,j] = f(model, np.array([x[i], y[j]]))
+    mesh = ax.pcolormesh(xv, yv, z, shading='gouraud' if blur else 'auto')
+    fig.colorbar(mesh, ax=ax)
+
 def plot_gd(data, arr, fig, ax):
     mesh = ax.pcolormesh(data.points[...,0], data.points[...,1], arr)
     fig.colorbar(mesh, ax=ax)
