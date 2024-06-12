@@ -19,12 +19,13 @@ SCALE = 2.*np.pi/500.
 ALPHA = 0.3
 
 # simulation quality
-RADIUS = 3
+RADIUS = 4
+GRID_SIZE = 15
 
 # plotting
-N = 10
-SL_MIN, SL_MAX = 0.001, 0.020
-DISP_MIN, DISP_MAX = -0.025, 0.025
+N, M = 4, 4
+SL_MIN, SL_MAX = 0.017, 0.025
+DISP_MIN, DISP_MAX = -0.010, 0.001
 
 
 
@@ -44,15 +45,18 @@ def inspect(sl_pot, disp_pot):
     m = model(sl_pot, disp_pot)
     fig, ax = plt.subplots()
     plot_bandstructure(m, 50, ax)
-    d = m.solve(4)
+    d = m.solve(GRID_SIZE)
     chern = d.chern_number(band)
     fig.suptitle(f"SL: {sl_pot}, Disp: {disp_pot}, Chern: {chern}")
 
-def plot_2d(rows, cols, xv, yv, data):
+def plot_2d(rows, cols, xv, yv, data, names):
     fig, axs = plt.subplots(rows, cols)
-    for ax, z in zip(axs.flat, data):
+    for ax, z, name in zip(axs.flat, data, names):
         mesh = ax.pcolormesh(xv, yv, z)
         fig.colorbar(mesh, ax=ax)
+        ax.set_xlabel("$V_{SL}$")
+        ax.set_ylabel("$V_0$")
+        ax.set_title(name)
 
 
 
@@ -63,26 +67,28 @@ def plot_2d(rows, cols, xv, yv, data):
 
 if __name__ == '__main__':
     sl = np.linspace(SL_MIN, SL_MAX, N)
-    disp = np.linspace(DISP_MIN, DISP_MAX, N)
+    disp = np.linspace(DISP_MIN, DISP_MAX, M)
     slv, dispv = np.meshgrid(sl, disp, indexing='ij')
-    above = np.zeros((N,N))
-    below = np.zeros((N,N))
-    width = np.zeros((N,N))
-    chern = np.zeros((N,N))
-    qm_eig = np.zeros((N,N))
+    above = np.zeros((N,M))
+    below = np.zeros((N,M))
+    width = np.zeros((N,M))
+    chern = np.zeros((N,M))
+    # qm_eig = np.zeros((N,M))
 
     for i in range(N):
-        for j in range(N):
-            d = model(sl[i], disp[j]).solve(4)
+        for j in range(M):
+            d = model(sl[i], disp[j]).solve(GRID_SIZE)
             # band = d.lowest_pos_band()
             above[i,j] = d.gap_above(band)
             below[i,j] = d.gap_above(band - 1)
             width[i,j] = d.bandwidth(band)
             chern[i,j] = d.chern_number(band)
-            qm_eig[i,j] = np.min(np.abs(np.linalg.eigvalsh(d.quantum_metric(band))))
+            # qm_eig[i,j] = np.min(np.abs(np.linalg.eigvalsh(d.quantum_metric(band))))
 
-    min_gap = np.log(np.minimum(above, below))
+    min_gap = np.minimum(above, below)
 
-    plot_2d(2, 3, slv, dispv, [above, below, min_gap, width, chern, qm_eig])
+    plot_2d(2, 3, slv, dispv, 
+            [above, below, min_gap, width, chern], 
+            ["Gap above", "Gap below", "Min gap", "Band width", "Chern number"])
 
     plt.show()
