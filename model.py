@@ -30,6 +30,22 @@ class Model:
             [g11, g12 + 0.5j * berry_curv],
             [g12 - 0.5j * berry_curv, g22]
             ])
+    
+    def lowest_pos_band(self):
+        return np.argmax(self.spectrum([0,0]) > 0)
+    
+    def gaps_at(self, k, band):
+        spec = self.spectrum(k)
+        return (spec[band + 1] - spec[band], spec[band] - spec[band-1])
+    
+    def gaps(self, ks, band):
+        above = np.inf
+        below = np.inf
+        for k in ks:
+            a, b = self.gaps_at(k, band)
+            above = min(above, a)
+            below = min(below, b)
+        return (above, below)
 
 def mod_pi(x):
     y = x / 2 / np.pi
