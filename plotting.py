@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 class Path:
     def __init__(self, vertices, closed=True):
@@ -25,11 +26,14 @@ class Path:
         vertex_ts = np.insert(np.cumsum(self.dists) / self.length, 0, 0)
         return ts, points, vertex_ts
     
-def plot_bandstructure(model, n, ax):
+def plot_bandstructure(model, n, ax, highlight=None):
     path = Path(list(model.lattice.hs_points.values()))
     ts, ks, hs_ts = path.points(n)
-    Es = [model.spectrum(k) for k in ks]
+    Es = np.array([model.spectrum(k) for k in ks])
     ax.plot(ts, Es, c='k')
+
+    if highlight:
+        ax.plot(ts, Es[:,highlight], c='r')
 
     ax.set_ylim(-0.035, 0.035)
     labels = list(model.lattice.hs_points.keys())
@@ -37,6 +41,9 @@ def plot_bandstructure(model, n, ax):
     ax.set_xticks(ticks=hs_ts, labels=labels)
     for t in hs_ts:
         ax.axvline(x=t, ls=':', c='k')
+
+    ax.set_title("Band structure")
+    ax.set_ylabel("Energy")
 
 def plot_bz(model, f, n, fig, ax, zoom=0.5, blur=True):
     next_gamma = np.abs(model.lattice.trans @ np.array([1,1]))
@@ -50,12 +57,14 @@ def plot_bz(model, f, n, fig, ax, zoom=0.5, blur=True):
     mesh = ax.pcolormesh(xv, yv, z, shading='gouraud' if blur else 'auto')
     fig.colorbar(mesh, ax=ax)
 
-def plot_gd(data, arr, fig, ax):
-    mesh = ax.pcolormesh(data.points[...,0], data.points[...,1], arr)
+def plot_grid_data(grid, z, fig, ax):
+    mesh = ax.pcolormesh(grid.points[...,0], grid.points[...,1], z)
     fig.colorbar(mesh, ax=ax)
 
-def plot_gd_berry_curvature(data, band, fig, ax):
-    plot_gd(data, data.berry_curvature(band), fig, ax)
-
-def plot_gd_quantum_metric_det(data, band, fig, ax):
-    plot_gd(data, np.linalg.det(data.quantum_metric(band)), fig, ax)
+def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, blur=False):
+    for ax, z, name in zip(axs, data, axlabels):
+        mesh = ax.pcolormesh(xv, yv, z, shading='gouraud' if blur else 'auto')
+        fig.colorbar(mesh, ax=ax)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(name)
