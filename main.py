@@ -1,5 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import colors as colors
 
 from continuum import *
 from superlattice import *
@@ -39,7 +40,7 @@ def sweep_pots_grid(
     chern = np.zeros((sl_n, disp_n))
 
     # awful hack
-    band = model(0.005, -0.010, 2.*np.pi/500, 3).lowest_pos_band() + band_offset
+    band = model(0.005, -0.010, 2.*np.pi/500, radius).lowest_pos_band() + band_offset
 
     for i in range(sl_n):
         for j in range(disp_n):
@@ -49,14 +50,24 @@ def sweep_pots_grid(
             width[i,j] = d.bandwidth(band)
             chern[i,j] = d.chern_number(band)
 
+    above = np.maximum(0, above)
+    below = np.maximum(0, below)
     min_gap = np.minimum(above, below)
 
     fig, axs = plt.subplots(2, 3)
     plots_2d(slv, dispv, 
-            [above, below, min_gap, width, chern], 
+            [above, below, min_gap, width], 
             fig, axs.flat,
-            ["Gap above", "Gap below", "Min gap", "Band width", "Chern number"],
+            ["Gap above", "Gap below", "Min gap", "Band width"],
             "$V_{SL}$", "$V_0$")
+    
+    norm = colors.BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')
+    mesh = axs[1,1].pcolormesh(slv, dispv, chern, norm=norm, cmap='RdBu_r')
+    fig.colorbar(mesh, ax=axs[1,1])
+    axs[1,1].set_title("Chern number")
+    axs[1,1].set_xlabel("$V_{SL}$")
+    axs[1,1].set_ylabel("$V_0$")
+    
     plt.show()
 
 
@@ -65,7 +76,7 @@ def bands_and_bz(
           sl_pot, disp_pot, scale, band_offset, zoom, 
           radius, k_n, band_n):
     m = model(disp_pot, sl_pot, scale, radius)
-    band = model(0.005, -0.010, 2.*np.pi/500, 3).lowest_pos_band() + band_offset
+    band = model(0.005, -0.010, 2.*np.pi/500, radius).lowest_pos_band() + band_offset
 
     fig, axs = plt.subplots(2,2)
     plot_bandstructure(m, band_n, axs[0,0], highlight=band)
