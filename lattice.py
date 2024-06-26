@@ -1,11 +1,12 @@
 import numpy as np
 
 class Lattice:
-    def __init__(self, a1, a2, adjacents, hs_points=None):
+    def __init__(self, a1, a2, adjacents, bz_mat, hs_points=None):
         self.a1 = np.array(a1)
         self.a2 = np.array(a2)
         self.trans = np.array([a1,a2]).T
         self.adjacents = np.array(adjacents)
+        self.bz_mat = np.array(bz_mat)
         self.hs_points = hs_points
 
     def point_at(self, ind):
@@ -14,6 +15,9 @@ class Lattice:
     def is_adjacent(self, ind1, ind2):
         diff = ind2 - ind1
         return np.any(np.all(diff == self.adjacents, axis=1))
+    
+    def in_first_bz(self, pt):
+        return np.all(np.abs(self.bz_mat @ pt) <= 1)
 
     
 class TriangularLattice(Lattice):
@@ -26,7 +30,8 @@ class TriangularLattice(Lattice):
             "K": np.array([a / 2., a / (2 * np.sqrt(3))]),
             "M": np.array([a / 2., 0.])
         }
-        super().__init__(a1, a2, adjacents, hs_points)
+        bz_mat = np.array([[1,0], [1/2, np.sqrt(3)/2], [-1/2, np.sqrt(3)/2]]) / a
+        super().__init__(a1, a2, adjacents, bz_mat, hs_points)
 
     @staticmethod
     def indices(radius):
@@ -37,7 +42,7 @@ class TriangularLattice(Lattice):
             for pt in partial_lattice:
                 full_lattice.append(np.linalg.matrix_power(rot, t) @ pt)
         return full_lattice
-    
+
 class SquareLattice(Lattice):
     def __init__(self, a):
         adjacents = [[1,0],[0,1],[-1,0],[0,-1]]
@@ -46,7 +51,8 @@ class SquareLattice(Lattice):
             "X": np.array([a,0]),
             "M": np.array([a,a])
         }
-        super().__init__([a,0], [0,a], adjacents, hs_points)
+        bz_mat = [[1/a, 0], [0, 1/a]]
+        super().__init__([a,0], [0,a], adjacents, bz_mat, hs_points)
 
     @staticmethod
     def indices(radius):
