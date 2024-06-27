@@ -1,7 +1,8 @@
 import numpy as np
-from model import *
 
-class GatedBernalBGModel(Model):
+from core import Model
+
+class BernalBLGModel(Model):
     def __init__(self, velocity, il_hopping, il_potential):
         self.velocity = velocity
         self.il_hopping = il_hopping

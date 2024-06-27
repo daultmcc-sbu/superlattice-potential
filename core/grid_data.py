@@ -1,4 +1,5 @@
 import numpy as np
+from .utilities import mod_pi
 
 class GridData:
     def __init__(self, trans, points, eigvals, eigvecs, divisions):
@@ -66,7 +67,3 @@ def extend_grid(grid):
     extended_0 = np.concatenate((grid, grid[np.newaxis,0]), axis=0)
     extended_01 = np.concatenate((extended_0, extended_0[:,0,np.newaxis]), axis=1)
     return extended_01
-
-def mod_pi(x):
-    y = x / 2 / np.pi
-    return 2 * np.pi * (y - np.round(y))

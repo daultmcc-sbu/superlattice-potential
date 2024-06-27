@@ -1,4 +1,6 @@
 import numpy as np
+from .utilities import mod_pi
+from .grid_data import GridData
 
 class Model:
     def spectrum(self, k):
@@ -46,7 +48,17 @@ class Model:
             above = min(above, a)
             below = min(below, b)
         return (above, below)
+    
+    def solve(self, divisions):
+        # marks = np.arange(0, divisions + 1) / divisions
+        marks = np.linspace(0, 1, divisions + 1)
+        a1s = np.outer(marks, self.lattice.a1)
+        a1s_expanded = np.repeat(a1s[:,np.newaxis], divisions + 1, axis=1)
+        a2s = np.outer(marks, self.lattice.a2)
+        a2s_expanded = np.repeat(a2s[np.newaxis,:], divisions + 1, axis=0)
+        points = a1s_expanded + a2s_expanded
 
-def mod_pi(x):
-    y = x / 2 / np.pi
-    return 2 * np.pi * (y - np.round(y))
+        hamiltonians = np.array([[self.hamiltonian(k) for k in row] for row in points])
+        eigvals, eigvecs = np.linalg.eigh(hamiltonians)
+
+        return GridData(self.lattice.trans / divisions, points, eigvals, eigvecs, divisions)

@@ -4,10 +4,9 @@ from matplotlib import colors as colors
 
 import argparse
 
-from continuum import *
-from superlattice import *
-from lattice import *
-from plotting import *
+from core import *
+from models.graphene import BernalBLGModel
+from models.superlattice import SuperlatticeModel
 
 
 #############################
@@ -20,7 +19,7 @@ IL_HOPPING = 0.4
 ALPHA = 0.3
 
 def make_model(sl_pot, disp_pot, scale, radius):
-        continuum = GatedBernalBGModel(VELOCITY, IL_HOPPING, disp_pot)
+        continuum = BernalBLGModel(VELOCITY, IL_HOPPING, disp_pot)
         lattice = TriangularLattice(2 * np.pi / scale)
         sl_potential = np.diag([sl_pot, sl_pot, ALPHA * sl_pot, ALPHA * sl_pot])
         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     parser_scan.add_argument('sl_max', type=float)
     parser_scan.add_argument('sl_n', type=int)
     parser_scan.add_argument('disp_min', type=float)
-    parser_scan.add_argument('disp_max', type=int)
+    parser_scan.add_argument('disp_max', type=float)
     parser_scan.add_argument('disp_n', type=int)
     parser_scan.add_argument('-r', '--radius', default=3)
     parser_scan.add_argument('-s', '--scale', default=500.0)
