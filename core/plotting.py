@@ -94,7 +94,9 @@ def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blu
     xv, yv = np.meshgrid(x, y, indexing='ij')
 
     if fast:
-        qgt = fast_qgt_bz(model, x, y, band)
+        Hs = make_hamiltonians_single(model, xv, yv)
+        _, _, _, berry, g11, g22, g12 = fast_energies_and_qgt_raw(Hs, band)
+        qgt = qgt_from_raw(berry, g11, g22, g12)
     else:
         qgt = np.zeros((k_n, k_n, 2, 2), dtype=model.dtype)
 
@@ -117,7 +119,7 @@ def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blu
             qm_det[i,j] = np.linalg.det(np.real(qgt[i,j]))
             qgt_eig[i,j] = eig
 
-            if eig < min_qgt_eig and model.lattice.in_first_bz(np.array([x[i], y[j]])):
+            if eig < min_qgt_eig and model.lattice.in_first_bz(x[i], y[j]):
                  min_qgt_eig = eig
                  min_qgt_eigvec = vec
 

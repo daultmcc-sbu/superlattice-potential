@@ -16,9 +16,18 @@ class Lattice:
         diff = ind2 - ind1
         return np.any(np.all(diff == self.adjacents, axis=1))
     
-    def in_first_bz(self, pt):
-        return np.all(np.abs(self.bz_mat @ pt) <= 1)
+    def in_first_bz(self, x, y):
+        dists = np.tensordot(self.bz_mat, np.array([x,y]), axes=(1,0))
+        return np.all(np.abs(dists) <= 0.5, axis=0)
 
+    def bz_grid(self, spacing):
+        # hacky, may not work for all lattices
+        a = np.max(np.abs(self.trans))
+        x = np.arange(-a, a, spacing)
+        y = np.arange(-a, a, spacing)
+        xv, yv = np.meshgrid(x, y, indexing='ij')
+        in_bz = self.in_first_bz(xv, yv)
+        return xv[in_bz], yv[in_bz]
     
 class TriangularLattice(Lattice):
     def __init__(self, a):

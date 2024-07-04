@@ -7,7 +7,7 @@ import numba as nb
     '(m,n,n),()->(),(),(),(),(),(),()',
     target='parallel', cache=True
 )
-def fast_energies_and_geom(Hs, band, below, at, above, berry, g11, g22, g12):
+def fast_energies_and_qgt_raw(Hs, band, below, at, above, berry, g11, g22, g12):
     ceigvals, ceigvecs = np.linalg.eigh(Hs[0,:,:])
     below[0] = ceigvals[band-1]
     at[0] = ceigvals[band]
@@ -32,18 +32,29 @@ def fast_energies_and_geom(Hs, band, below, at, above, berry, g11, g22, g12):
     g22[0] = g22_
     g12[0] = 1e8 * (1 - np.abs(link0011)) - 0.5 * (g11_ + g22_)
 
-def fast_qgt_bz(model, x, y, band):
-    Hs = np.zeros((x.size, y.size, 4, model.bands, model.bands), dtype=model.dtype)
-    for i in range(x.size):
-        for j in range(y.size):
-            Hs[i,j,0] = model.hamiltonian(np.array([x[i], y[j]]))
-            Hs[i,j,1] = model.hamiltonian(np.array([x[i] + 1e-4, y[j]]))
-            Hs[i,j,2] = model.hamiltonian(np.array([x[i] + 1e-4, y[j] + 1e-4]))
-            Hs[i,j,3] = model.hamiltonian(np.array([x[i], y[j] + 1e-4]))
+def make_hamiltonians_single(model, xv, yv):
+    Hs = np.zeros(xv.shape + (4, model.bands, model.bands), dtype=model.dtype)
+    it = np.nditer([xv, yv], flags=['multi_index'])
+    for x, y in it:
+        Hs[it.multi_index + (0,)] = model.hamiltonian(np.array([x, y]))
+        Hs[it.multi_index + (1,)] = model.hamiltonian(np.array([x + 1e-4, y]))
+        Hs[it.multi_index + (2,)] = model.hamiltonian(np.array([x + 1e-4, y + 1e-4]))
+        Hs[it.multi_index + (3,)] = model.hamiltonian(np.array([x, y + 1e-4]))
+    return Hs
 
-    _, _, _, berry, g11, g22, g12 = fast_energies_and_geom(Hs, band)
+def make_hamiltonians_sweep(modelf, paramvs, xv, yv):
+    m0 = modelf(*[pv.flat[0] for pv in paramvs])
+    Hs = np.zeros(paramvs[0].shape + [4, m0.bands, m0.bands], dtype=m0.dtype)
+    it = np.nditer(paramvs, flags=['multi_index'])
+    for params in it:
+        model = modelf(*params)
+        Hs[it.multi_index] = make_hamiltonians_single(model, xv, yv)
+    return Hs
 
-    qgt = np.zeros((x.size, y.size, 2, 2), dtype=model.dtype)
+def qgt_from_raw(berry, g11, g22, g12):
+    dt = (berry.dtype.type(1) * np.complex64(1j)).dtype
+
+    qgt = np.zeros(berry.shape + (2, 2), dtype=dt)
     qgt[...,0,0] = g11
     qgt[...,1,1] = g22
     qgt[...,0,1] = g12 + 0.5j * berry
