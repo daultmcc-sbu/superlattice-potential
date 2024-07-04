@@ -2,6 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import colors
 
+from .fast import *
+
 
 ###################
 #### UTILITIES ####
@@ -55,7 +57,7 @@ def plot_bz(model, f, n, fig, ax, zoom=0.5, blur=True):
     next_gamma = np.abs(model.lattice.trans @ np.array([1,1]))
     x = np.linspace(-zoom * next_gamma[0], zoom * next_gamma[0], n)
     y = np.linspace(-zoom * next_gamma[1], zoom * next_gamma[1], n)
-    xv, yv = np.meshgrid(x,y)
+    xv, yv = np.meshgrid(x,y, indexing='ij')
     z = np.zeros((n,n))
     for i in range(n):
         for j in range(n):
@@ -82,7 +84,7 @@ def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, blur=False):
 #### PROCEDURES ####
 ####################
         
-def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blur=True):
+def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blur=True, fast=True):
     fig, axs = plt.subplots(2, 3, figsize=(18,10))
     plot_bandstructure(model, band_n, axs[0,0], highlight=band)
 
@@ -91,7 +93,10 @@ def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blu
     y = np.linspace(-zoom * size, zoom * size, k_n)
     xv, yv = np.meshgrid(x, y, indexing='ij')
 
-    qgt = np.zeros((k_n, k_n, 2, 2), dtype=complex)
+    if fast:
+        qgt = fast_qgt_bz(model, x, y, band)
+    else:
+        qgt = np.zeros((k_n, k_n, 2, 2), dtype=model.dtype)
 
     berry = np.zeros((k_n, k_n))
     qm_det = np.zeros((k_n, k_n))
@@ -101,7 +106,9 @@ def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blu
 
     for i in range(k_n):
         for j in range(k_n):
-            qgt[i,j] = model.qgt(np.array([x[i], y[j]]), band)
+            if not fast:
+                qgt[i,j] = model.qgt(np.array([x[i], y[j]]), band)
+                
             eigs, vecs = np.linalg.eigh(qgt[i,j])
             eig = eigs[0]
             vec = vecs[:,0]

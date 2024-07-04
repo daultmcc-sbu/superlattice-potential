@@ -9,7 +9,7 @@ class Model:
     def eig(self, k):
         return np.linalg.eigh(self.hamiltonian(k))
     
-    def qgt(self, k, band, trans=np.array([[1e-7,0],[0,1e-7]])):
+    def qgt(self, k, band, trans=np.array([[1e-5,0],[0,1e-5]])):
         a = trans[:,0]
         b = trans[:,1]
         solver = np.linalg.inv(np.array([
@@ -31,7 +31,7 @@ class Model:
         return np.array([
             [g11, g12 + 0.5j * berry_curv],
             [g12 - 0.5j * berry_curv, g22]
-            ])
+            ], dtype=self.dtype)
     
     def lowest_pos_band(self):
         return np.argmax(self.spectrum([0,0]) > 0)

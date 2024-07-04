@@ -9,19 +9,16 @@ from models.graphene import BernalBLGModel
 from models.superlattice import SuperlatticeModel
 
 
-#############################
-#### MODEL SPECIFICATION ####
-#############################
+###############
+#### MODEL ####
+###############
 
-# fixed parameters
-VELOCITY = 6.582
-IL_HOPPING = 0.4
 ALPHA = 0.3
 
 def make_model(sl_pot, disp_pot, scale, radius):
-        continuum = BernalBLGModel(VELOCITY, IL_HOPPING, disp_pot)
+        continuum = BernalBLGModel(il_potential=disp_pot, dtype=np.complex128)
         lattice = TriangularLattice(2 * np.pi / scale)
-        sl_potential = np.diag([sl_pot, sl_pot, ALPHA * sl_pot, ALPHA * sl_pot])
+        sl_potential = np.diag(np.array([sl_pot, sl_pot, ALPHA * sl_pot, ALPHA * sl_pot], dtype=np.complex64))
         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
 
 
@@ -66,12 +63,12 @@ if __name__ == '__main__':
     parser_bz = subparsers.add_parser("bz")
     parser_bz.add_argument('sl_pot', type=float)
     parser_bz.add_argument('disp_pot', type=float)
-    parser_bz.add_argument('-z', '--zoom', default=0.6)
-    parser_bz.add_argument('-r', '--radius', default=3)
-    parser_bz.add_argument('-s', '--scale', default=500.0)
-    parser_bz.add_argument('-bn', '--bz-res', default=25)
-    parser_bz.add_argument('-kn', '--struct-res', default=50)
-    parser_bz.add_argument('-b', '--band-offset', default=0)
+    parser_bz.add_argument('-z', '--zoom', type=float, default=0.6)
+    parser_bz.add_argument('-r', '--radius', type=int, default=3)
+    parser_bz.add_argument('-s', '--scale', type=float, default=500.0)
+    parser_bz.add_argument('-bn', '--bz-res', type=int, default=25)
+    parser_bz.add_argument('-kn', '--struct-res', type=int, default=50)
+    parser_bz.add_argument('-b', '--band-offset', type=int, default=0)
     parser_bz.set_defaults(func=bz_sc)
 
     parser_scan = subparsers.add_parser("scan")
@@ -81,10 +78,10 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_min', type=float)
     parser_scan.add_argument('disp_max', type=float)
     parser_scan.add_argument('disp_n', type=int)
-    parser_scan.add_argument('-r', '--radius', default=3)
-    parser_scan.add_argument('-s', '--scale', default=500.0)
-    parser_scan.add_argument('-bn', '--bz-res', default=4)
-    parser_scan.add_argument('-b', '--band-offset', default=0)
+    parser_scan.add_argument('-r', '--radius', type=int, default=3)
+    parser_scan.add_argument('-s', '--scale', type=float, default=500.0)
+    parser_scan.add_argument('-bn', '--bz-res', type=int, default=4)
+    parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
     parser_scan.set_defaults(func=scan_sc)
 
     args = parser.parse_args()
