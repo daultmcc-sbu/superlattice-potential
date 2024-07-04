@@ -11,6 +11,8 @@ from .fast import *
 
 class Path:
     def __init__(self, vertices, closed=True):
+        vertices = list(vertices)
+
         if closed:
             vertices.append(vertices[0])
         
@@ -35,7 +37,7 @@ class Path:
         return ts, points, vertex_ts
     
 def plot_bandstructure(model, n, ax, highlight=None):
-    path = Path(list(model.lattice.hs_points.values()))
+    path = Path(model.lattice.hs_points)
     ts, ks, hs_ts = path.points(n)
     Es = np.array([model.spectrum(k) for k in ks])
     ax.plot(ts, Es, c='k')
@@ -44,7 +46,7 @@ def plot_bandstructure(model, n, ax, highlight=None):
         ax.plot(ts, Es[:,highlight], c='r')
 
     ax.set_ylim(-0.035, 0.035)
-    labels = list(model.lattice.hs_points.keys())
+    labels = model.lattice.hs_labels
     labels.append(labels[0])
     ax.set_xticks(ticks=hs_ts, labels=labels)
     for t in hs_ts:

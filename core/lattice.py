@@ -1,13 +1,14 @@
 import numpy as np
 
 class Lattice:
-    def __init__(self, a1, a2, adjacents, bz_mat, hs_points=None):
+    def __init__(self, a1, a2, adjacents, bz_mat, hs_points, hs_labels):
         self.a1 = np.array(a1)
         self.a2 = np.array(a2)
         self.trans = np.array([a1,a2]).T
         self.adjacents = np.array(adjacents)
         self.bz_mat = np.array(bz_mat)
-        self.hs_points = hs_points
+        self.hs_points = np.array(hs_points)
+        self.hs_labels = hs_labels
 
     def point_at(self, ind):
         return self.trans @ ind
@@ -34,13 +35,13 @@ class TriangularLattice(Lattice):
         a1 = [a, 0]
         a2 = [a/2, np.sqrt(3)/2 * a]
         adjacents = [[-1,1],[0,1],[1,0],[1,-1],[0,-1],[-1,0]]
-        hs_points = {
-            r"$\Gamma$": np.array([0,0]), 
-            "K": np.array([a / 2., a / (2 * np.sqrt(3))]),
-            "M": np.array([a / 2., 0.])
-        }
+        self.G = np.zeros(2)
+        self.K = np.array([a / 2., a / (2 * np.sqrt(3))])
+        self.M = np.array([a / 2., 0.])
+        hs_points = [self.G, self.K, self.M]
+        hs_labels = [r"$\Gamma$", "K", "M"]
         bz_mat = np.array([[1,0], [1/2, np.sqrt(3)/2], [-1/2, np.sqrt(3)/2]]) / a
-        super().__init__(a1, a2, adjacents, bz_mat, hs_points)
+        super().__init__(a1, a2, adjacents, bz_mat, hs_points, hs_labels)
 
     @staticmethod
     def indices(radius):
@@ -55,13 +56,13 @@ class TriangularLattice(Lattice):
 class SquareLattice(Lattice):
     def __init__(self, a):
         adjacents = [[1,0],[0,1],[-1,0],[0,-1]]
-        hs_points = {
-            r"$\Gamma$": np.array([0,0]),
-            "X": np.array([a,0]),
-            "M": np.array([a,a])
-        }
+        self.G = np.zeros(2)
+        self.X = np.array([a,0])
+        self.M = np.array([a,a])
+        hs_points = [self.G, self.X, self.M]
+        hs_labels = [r"$\Gamma$", "X", "M"]
         bz_mat = [[1/a, 0], [0, 1/a]]
-        super().__init__([a,0], [0,a], adjacents, bz_mat, hs_points)
+        super().__init__([a,0], [0,a], adjacents, bz_mat, hs_points, hs_labels)
 
     @staticmethod
     def indices(radius):
