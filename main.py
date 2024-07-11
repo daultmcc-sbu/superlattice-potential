@@ -5,7 +5,7 @@ from matplotlib import colors as colors
 import argparse
 
 from core import *
-from models.graphene import BernalBLGModel
+from models.graphene import BernalBLG4BandModel
 from models.superlattice import SuperlatticeModel
 
 
@@ -16,9 +16,9 @@ from models.superlattice import SuperlatticeModel
 ALPHA = 0.3
 
 def make_model(sl_pot, disp_pot, scale, radius):
-        continuum = BernalBLGModel(il_potential=disp_pot, dtype=np.complex128)
+        continuum = BernalBLG4BandModel(il_potential=disp_pot, dtype=np.complex128)
         lattice = TriangularLattice(2 * np.pi / scale)
-        sl_potential = np.diag(np.array([sl_pot, sl_pot, ALPHA * sl_pot, ALPHA * sl_pot], dtype=np.complex64))
+        sl_potential = np.diag(np.array([sl_pot, sl_pot, ALPHA * sl_pot, ALPHA * sl_pot], dtype=np.complex128))
         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
 
 
@@ -52,6 +52,7 @@ def scan_sc(args):
     fig = make_plot_sweep_parameters_2d_grid(modelf, band, 
                         args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
                         args.disp_min, args.disp_max, args.disp_n, "$V_0$",
+                        # spacing = 2*np.pi / args.scale / args.bz_res)
                         grid_size=args.bz_res)
     return fig
 

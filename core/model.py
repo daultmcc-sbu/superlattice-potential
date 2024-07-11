@@ -4,10 +4,10 @@ from .grid_data import GridData
 
 class Model:
     def spectrum(self, k):
-        return np.linalg.eigvalsh(self.hamiltonian(k))
+        return np.linalg.eigvalsh(self.hamiltonian(*k))
     
     def eig(self, k):
-        return np.linalg.eigh(self.hamiltonian(k))
+        return np.linalg.eigh(self.hamiltonian(*k))
     
     def qgt(self, k, band, trans=np.array([[1e-5,0],[0,1e-5]])):
         a = trans[:,0]
@@ -58,7 +58,7 @@ class Model:
         a2s_expanded = np.repeat(a2s[np.newaxis,:], divisions + 1, axis=0)
         points = a1s_expanded + a2s_expanded
 
-        hamiltonians = np.array([[self.hamiltonian(k) for k in row] for row in points])
+        hamiltonians = np.array([[self.hamiltonian(*k) for k in row] for row in points])
         eigvals, eigvecs = np.linalg.eigh(hamiltonians)
 
         return GridData(self.lattice.trans / divisions, points, eigvals, eigvecs, divisions)

@@ -2,8 +2,8 @@ import numpy as np
 import numba as nb
 
 @nb.guvectorize(
-    ['(complex64[:,:,:], int32, int32[:], int32[:], int32[:], int32[:], int32[:], int32[:], int32[:])',
-     '(complex128[:,:,:], int64, int64[:], int64[:], int64[:], int64[:], int64[:], int64[:], int64[:])'],
+    ['(complex64[:,:,:], int32, float32[:], float32[:], float32[:], float32[:], float32[:], float32[:], float32[:])',
+     '(complex128[:,:,:], int64, float64[:], float64[:], float64[:], float64[:], float64[:], float64[:], float64[:])'],
     '(m,n,n),()->(),(),(),(),(),(),()',
     target='parallel', cache=True
 )
@@ -12,8 +12,8 @@ def fast_energies_and_qgt_raw(Hs, band, below, at, above, berry, g11, g22, g12):
     below[0] = ceigvals[band-1]
     at[0] = ceigvals[band]
     above[0] = ceigvals[band+1]
-    vec00 = ceigvecs[:,band]
 
+    vec00 = ceigvecs[:,band]
     vec10 = np.linalg.eigh(Hs[1,:,:])[1][:,band]
     vec11 = np.linalg.eigh(Hs[2,:,:])[1][:,band]
     vec01 = np.linalg.eigh(Hs[3,:,:])[1][:,band]
@@ -35,16 +35,15 @@ def fast_energies_and_qgt_raw(Hs, band, below, at, above, berry, g11, g22, g12):
 def make_hamiltonians_single(model, xv, yv):
     Hs = np.zeros(xv.shape + (4, model.bands, model.bands), dtype=model.dtype)
     it = np.nditer([xv, yv], flags=['multi_index'])
+    xo = np.array([0, 1e-4, 1e-4, 0])
+    yo = np.array([0, 0, 1e-4, 1e-4])
     for x, y in it:
-        Hs[it.multi_index + (0,)] = model.hamiltonian(np.array([x, y]))
-        Hs[it.multi_index + (1,)] = model.hamiltonian(np.array([x + 1e-4, y]))
-        Hs[it.multi_index + (2,)] = model.hamiltonian(np.array([x + 1e-4, y + 1e-4]))
-        Hs[it.multi_index + (3,)] = model.hamiltonian(np.array([x, y + 1e-4]))
+        Hs[it.multi_index] = model.hamiltonian(x + xo, y + yo)
     return Hs
 
 def make_hamiltonians_sweep(modelf, paramvs, xv, yv):
     m0 = modelf(*[pv.flat[0] for pv in paramvs])
-    Hs = np.zeros(paramvs[0].shape + [4, m0.bands, m0.bands], dtype=m0.dtype)
+    Hs = np.zeros(paramvs[0].shape + xv.shape + (4, m0.bands, m0.bands), dtype=m0.dtype)
     it = np.nditer(paramvs, flags=['multi_index'])
     for params in it:
         model = modelf(*params)
