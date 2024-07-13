@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib import colors
+from matplotlib.colors import LogNorm, BoundaryNorm, CenteredNorm
+import itertools
 
 from .fast import *
 
@@ -35,17 +36,24 @@ class Path:
         points = np.array([self.along(t) for t in ts])
         vertex_ts = np.insert(np.cumsum(self.dists) / self.length, 0, 0)
         return ts, points, vertex_ts
-    
+
 def plot_bandstructure(model, n, ax, highlight=None):
     path = Path(model.lattice.hs_points)
     ts, ks, hs_ts = path.points(n)
-    Es = np.array([model.spectrum(k) for k in ks])
+    # Es = np.array([model.spectrum(k) for k in ks])
+    Es = fast_energies(model.hamiltonian(ks[:,0], ks[:,1]))
     ax.plot(ts, Es, c='k')
 
     if highlight:
         ax.plot(ts, Es[:,highlight], c='r')
+        focus = highlight
+    else:
+        focus = np.argmax(Es[0] > 0)
 
-    ax.set_ylim(-0.035, 0.035)
+    focus_range = 1.2 * Es[:, focus-5:focus+6]
+    yscale = np.abs(focus_range).max()
+    ax.set_ylim(-yscale, yscale)
+    
     labels = model.lattice.hs_labels
     labels.append(labels[0])
     ax.set_xticks(ticks=hs_ts, labels=labels)
@@ -71,14 +79,30 @@ def plot_grid_data(grid, z, fig, ax):
     mesh = ax.pcolormesh(grid.points[...,0], grid.points[...,1], z)
     fig.colorbar(mesh, ax=ax)
 
-def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, blur=False):
-    for ax, z, name in zip(axs, data, axlabels):
-        mesh = ax.pcolormesh(xv, yv, z, shading='gouraud' if blur else 'auto')
-        fig.colorbar(mesh, ax=ax)
+def is_outlier(points, thresh=2.5):
+    if len(points.shape) == 1:
+        points = points[:,None]
+    median = np.median(points, axis=0)
+    diff = np.sum((points - median)**2, axis=-1)
+    diff = np.sqrt(diff)
+    med_abs_deviation = np.median(diff)
+
+    modified_z_score = 0.6745 * diff / med_abs_deviation
+
+    return modified_z_score > thresh
+
+def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, opts=itertools.cycle([{}]), blur=False):
+    cbs = []
+    for ax, z, name, kwargs in zip(axs, data, axlabels, opts):
+        # z[is_outlier(z)] = np.nan
+        mesh = ax.pcolormesh(xv, yv, z, 
+                             shading='gouraud' if blur else 'auto', **kwargs)
+        cb = fig.colorbar(mesh, ax=ax)
+        cbs.append(cb)
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(name)
-
+    return cbs
 
 
 
@@ -139,15 +163,17 @@ def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blu
 
     for i in range(k_n):
         for j in range(k_n):
-            # tr_viol[i,j] = np.abs(np.tensordot(np.real(qgt[i,j]), tr_form) - berry[i,j])
-            tr_viol[i,j] = np.sqrt(qm_det[i,j]) - np.abs(np.tensordot(np.real(qgt[i,j]), tr_form))
+            tr_viol[i,j] = np.abs(np.tensordot(np.real(qgt[i,j]), tr_form) - berry[i,j])
+            # tr_viol[i,j] = np.abs(np.tensordot(np.real(qgt[i,j]), tr_form)) - np.sqrt(qm_det[i,j])
             null_viol[i,j] = np.linalg.norm(qgt[i,j] @ eigvec)
 
-    plots_2d(xv, yv, 
+    cbs = plots_2d(xv, yv, 
             [berry, qm_det, qgt_eig, null_viol, tr_viol],
             fig, axs.flat[1:],
             ["Berry curvature", "QM det", "Min QGT eigval", "Eigvec violation", "2-form violation"],
-            "$k_x$", "$k_y$", blur=blur)
+            "$k_x$", "$k_y$", 
+            opts=[{'norm': CenteredNorm(vcenter=0), 'cmap': 'RdBu_r'}, {}, {}, {}, {}],
+            blur=blur)
     
     plt.subplots_adjust(bottom=0.1, left=0.08, right=0.95, top=0.9)
     
@@ -183,11 +209,82 @@ def make_plot_sweep_parameters_2d_grid(modelf, band,
             ["Gap above", "Gap below", "Min gap", "Band width"],
             xlabel, xlabel)
     
-    norm = colors.BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')
+    norm = BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')
     mesh = axs[1,1].pcolormesh(xv, yv, chern, norm=norm, cmap='RdBu_r')
     fig.colorbar(mesh, ax=axs[1,1])
     axs[1,1].set_title("Chern number")
     axs[1,1].set_xlabel(xlabel)
     axs[1,1].set_ylabel(ylabel)
     
+    return fig
+
+def make_plot_sweep_parameters_2d(modelf, band,
+          amin, amax, an, alabel, bmin, bmax, bn, blabel,
+          spacing, eigvec_loc=False):
+    m0 = modelf(0,0)
+
+    a = np.linspace(amin, amax, an)
+    b = np.linspace(bmin, bmax, bn)
+    av, bv = np.meshgrid(a, b, indexing='ij')
+
+    xf, yf = m0.lattice.bz_grid(spacing)
+    print(xf.size)
+
+    above = np.zeros((an, bn))
+    below = np.zeros((an, bn))
+    width = np.zeros((an, bn))
+    chern = np.zeros((an, bn))
+    avg_tr_viol_qm = np.zeros((an, bn))
+    avg_tr_viol_berry = np.zeros((an, bn))
+    avg_norm_viol = np.zeros((an, bn))
+    qgt_min_eigval = np.zeros((an,bn))
+    qgt_avg_eigval = np.zeros((an, bn))
+
+    for i in range(an):
+        for j in range(bn):
+            Hs = make_hamiltonians_single(modelf(a[i], b[j]), xf, yf)
+            below_, at, above_, berry, g11, g22, g12 = fast_energies_and_qgt_raw(Hs, band)
+            above[i,j] = np.min(above_) - np.max(at)
+            below[i,j] = np.min(at) - np.max(below_)
+            width[i,j] = np.max(at) - np.min(at)
+            chern[i,j] = np.sum(berry)
+
+            qgt = qgt_from_raw(berry, g11, g22, g12)
+            qgt_eigvals = np.linalg.eigvalsh(qgt)[...,0]
+            min_ind = np.argmin(qgt_eigvals)
+            qgt_min_eigval[i,j] = qgt_eigvals[min_ind]
+            qgt_avg_eigval[i,j] = np.mean(qgt_eigvals)
+            eigvec = np.linalg.eigh(qgt[min_ind])[1][:,0]
+            tr_form = np.array([
+                [np.abs(eigvec[0])**2, np.real(np.conjugate(eigvec[0]) * eigvec[1])],
+                [np.real(np.conjugate(eigvec[0]) * eigvec[1]), np.abs(eigvec[1])**2]])
+            qm = np.real(qgt)
+            tr = np.abs(np.tensordot(qm, tr_form))
+            norm_viol = np.linalg.norm(qgt @ eigvec, axis=-1)
+            avg_tr_viol_qm[i,j] = np.mean(tr - np.sqrt(np.linalg.det(qm)))
+            avg_tr_viol_berry[i,j] = np.mean(tr - 0.5 * np.abs(berry))
+            avg_norm_viol[i,j] = np.mean(norm_viol)
+
+    chern = chern * spacing * spacing / 2 / np.pi
+    above = np.maximum(0, above)
+    below = np.maximum(0, below)
+    gap = np.minimum(above, below)
+    flatness = gap / width
+
+    comb = [qgt_avg_eigval, qgt_min_eigval, avg_norm_viol, avg_tr_viol_qm, avg_tr_viol_berry]
+    comb = np.concatenate([arr[~is_outlier(arr) & ~np.isnan(arr) & (arr > 0)] for arr in comb])
+    ideal_norm = LogNorm(comb.min(), comb.max())
+    ideal_opts = {'norm': ideal_norm, 'cmap': 'plasma'}
+
+    chern_norm = BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')
+    fig, axs = plt.subplots(2, 4)
+    plots_2d(av, bv, 
+            [gap, flatness, chern, qgt_avg_eigval, 
+             avg_norm_viol, avg_tr_viol_qm, avg_tr_viol_berry, qgt_min_eigval], 
+            fig, axs.flat,
+            ["Band gap", "Flatness", "Chern number", "Avg QGT eigval", 
+             "Nullity violation", "GTC violation (QM)", "GTC violation (Berry)", "Min QGT eigval"],
+            alabel, blabel,
+            opts=[{}, {}, {'norm': chern_norm, 'cmap': 'RdBu_r'}] + 5 * [ideal_opts])
+
     return fig
