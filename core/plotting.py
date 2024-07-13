@@ -79,17 +79,21 @@ def plot_grid_data(grid, z, fig, ax):
     mesh = ax.pcolormesh(grid.points[...,0], grid.points[...,1], z)
     fig.colorbar(mesh, ax=ax)
 
-def is_outlier(points, thresh=2.5):
-    if len(points.shape) == 1:
-        points = points[:,None]
-    median = np.median(points, axis=0)
-    diff = np.sum((points - median)**2, axis=-1)
-    diff = np.sqrt(diff)
-    med_abs_deviation = np.median(diff)
+# def is_outlier(points, thresh=0.5):
+    # if len(points.shape) == 1:
+    #     points = points[:,None]
+    # median = np.median(points, axis=0)
+    # diff = np.sum((points - median)**2, axis=-1)
+    # diff = np.sqrt(diff)
+    # med_abs_deviation = np.median(diff)
 
-    modified_z_score = 0.6745 * diff / med_abs_deviation
+    # modified_z_score = 0.6745 * diff / med_abs_deviation
 
-    return modified_z_score > thresh
+    # return modified_z_score > thresh
+def remove_outliers(points, fraction=0.02):
+    n = np.maximum(1, int(points.size * fraction))
+    sorted = np.sort(points)
+    return sorted[:-n]
 
 def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, opts=itertools.cycle([{}]), blur=False):
     cbs = []
@@ -110,69 +114,41 @@ def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, opts=itertools.cy
 #### PROCEDURES ####
 ####################
         
-def make_plot_band_geometry(model, band, zoom, k_n, band_n, eigvec_loc=None, blur=True, fast=True):
+def make_plot_band_geometry(model, band, zoom, bn, sn, eigvec_loc=None, blur=True):
     fig, axs = plt.subplots(2, 3, figsize=(18,10))
-    plot_bandstructure(model, band_n, axs[0,0], highlight=band)
+    plot_bandstructure(model, sn, axs[0,0], highlight=band)
 
     size = np.max(np.abs(model.lattice.trans @ np.array([1,1])))
-    x = np.linspace(-zoom * size, zoom * size, k_n)
-    y = np.linspace(-zoom * size, zoom * size, k_n)
+    x = np.linspace(-zoom * size, zoom * size, bn)
+    y = np.linspace(-zoom * size, zoom * size, bn)
     xv, yv = np.meshgrid(x, y, indexing='ij')
 
-    if fast:
-        Hs = make_hamiltonians_single(model, xv, yv)
-        _, _, _, berry, g11, g22, g12 = fast_energies_and_qgt_raw(Hs, band)
-        qgt = qgt_from_raw(berry, g11, g22, g12)
-    else:
-        qgt = np.zeros((k_n, k_n, 2, 2), dtype=model.dtype)
+    Hs = make_hamiltonians_single(model, xv, yv)
+    _, _, _, berry, g11, g22, g12 = fast_energies_and_qgt_raw(Hs, band)
+    qgt = qgt_from_raw(berry, g11, g22, g12)
+    qm = np.real(qgt)
 
-    berry = np.zeros((k_n, k_n))
-    qm_det = np.zeros((k_n, k_n))
-    qgt_eig = np.zeros((k_n, k_n))
-
-    min_qgt_eig = np.inf
-
-    for i in range(k_n):
-        for j in range(k_n):
-            if not fast:
-                qgt[i,j] = model.qgt(np.array([x[i], y[j]]), band)
-                
-            eigs, vecs = np.linalg.eigh(qgt[i,j])
-            eig = eigs[0]
-            vec = vecs[:,0]
-
-            berry[i,j] = 2 * np.imag(qgt[i,j,0,1])
-            qm_det[i,j] = np.linalg.det(np.real(qgt[i,j]))
-            qgt_eig[i,j] = eig
-
-            if eig < min_qgt_eig and model.lattice.in_first_bz(x[i], y[j]):
-                 min_qgt_eig = eig
-                 min_qgt_eigvec = vec
-
-    tr_viol = np.zeros((k_n, k_n))
-    null_viol = np.zeros((k_n, k_n))
+    qm_det = np.linalg.det(qm)
+    qgt_eig = np.linalg.eigvalsh(qgt)[...,0]
 
     if eigvec_loc is not None:
         eigvec = np.linalg.eigh(model.qgt(eigvec_loc, band))[1][:,0]
     else:
-        eigvec = min_qgt_eigvec
-
+        eigvec = np.linalg.eigh(qgt.reshape((-1,2,2))[qgt_eig.argmin()])[1][:,0]
+        
     tr_form = np.array([
          [np.abs(eigvec[0])**2, np.real(np.conjugate(eigvec[0]) * eigvec[1])],
          [np.real(np.conjugate(eigvec[0]) * eigvec[1]), np.abs(eigvec[1])**2]])
+    
+    tr_viol = np.abs(np.tensordot(qm, tr_form)) - berry
+    null_viol = np.linalg.norm(qgt @ eigvec, axis=-1)
 
-    for i in range(k_n):
-        for j in range(k_n):
-            tr_viol[i,j] = np.abs(np.tensordot(np.real(qgt[i,j]), tr_form) - berry[i,j])
-            # tr_viol[i,j] = np.abs(np.tensordot(np.real(qgt[i,j]), tr_form)) - np.sqrt(qm_det[i,j])
-            null_viol[i,j] = np.linalg.norm(qgt[i,j] @ eigvec)
-
-    cbs = plots_2d(xv, yv, 
+    plots_2d(xv, yv, 
             [berry, qm_det, qgt_eig, null_viol, tr_viol],
             fig, axs.flat[1:],
             ["Berry curvature", "QM det", "Min QGT eigval", "Eigvec violation", "2-form violation"],
             "$k_x$", "$k_y$", 
-            opts=[{'norm': CenteredNorm(vcenter=0), 'cmap': 'RdBu_r'}, {}, {}, {}, {}],
+            opts=[{'norm': CenteredNorm(), 'cmap': 'RdBu_r'}, {}, {}, {}, {}],
             blur=blur)
     
     plt.subplots_adjust(bottom=0.1, left=0.08, right=0.95, top=0.9)
@@ -272,7 +248,7 @@ def make_plot_sweep_parameters_2d(modelf, band,
     flatness = gap / width
 
     comb = [qgt_avg_eigval, qgt_min_eigval, avg_norm_viol, avg_tr_viol_qm, avg_tr_viol_berry]
-    comb = np.concatenate([arr[~is_outlier(arr) & ~np.isnan(arr) & (arr > 0)] for arr in comb])
+    comb = np.concatenate([remove_outliers(arr[np.isfinite(arr) & (arr > 0)]) for arr in comb])
     ideal_norm = LogNorm(comb.min(), comb.max())
     ideal_opts = {'norm': ideal_norm, 'cmap': 'plasma'}
 

@@ -57,8 +57,7 @@ def scan_sc(args):
     fig = make_plot_sweep_parameters_2d(modelf, band, 
                         args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
                         args.disp_min, args.disp_max, args.disp_n, "$V_0$",
-                        spacing = 2*np.pi / args.scale / args.bz_res)
-                        # grid_size=args.bz_res)
+                        spacing = 2*np.pi / args.scale / args.bz_quality)
     return fig
 
 if __name__ == '__main__':
@@ -74,7 +73,7 @@ if __name__ == '__main__':
     parser_bz.add_argument('disp_pot', type=float)
     parser_bz.add_argument('-z', '--zoom', type=float, default=0.6)
     parser_bz.add_argument('-bn', '--bz-res', type=int, default=50)
-    parser_bz.add_argument('-kn', '--struct-res', type=int, default=50)
+    parser_bz.add_argument('-sn', '--struct-res', type=int, default=100)
     parser_bz.add_argument('-b', '--band-offset', type=int, default=0)
     parser_bz.set_defaults(func=bz_sc)
 
@@ -85,7 +84,7 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_min', type=float)
     parser_scan.add_argument('disp_max', type=float)
     parser_scan.add_argument('disp_n', type=int)
-    parser_scan.add_argument('-bn', '--bz-res', type=int, default=10)
+    parser_scan.add_argument('-bq', '--bz-quality', type=int, default=10)
     parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
     parser_scan.set_defaults(func=scan_sc)
 
