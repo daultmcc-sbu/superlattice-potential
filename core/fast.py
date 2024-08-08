@@ -24,25 +24,17 @@ def fast_energies_and_qgt_raw(Hs, band, below, at, above, berry, g11, g22, g12):
     link0100 = np.vdot(vec01, vec00)
     link0011 = np.vdot(vec00, vec11)
 
-    berry[0] = 1e14 * np.angle(link0010 * link1011 * link1101 * link0100)
+    berry[0] = 1e8 * np.angle(link0010 * link1011 * link1101 * link0100)
 
-    g11_ = 2e14 * (1 - np.abs(link0010))
-    g22_ = 2e14 * (1 - np.abs(link0100))
+    g11_ = 2e8 * (1 - np.abs(link0010))
+    g22_ = 2e8 * (1 - np.abs(link0100))
     g11[0] = g11_
     g22[0] = g22_
-    g12[0] = 1e14 * (1 - np.abs(link0011)) - 0.5 * (g11_ + g22_)
-
-@nb.guvectorize(
-        ['(complex64[:,:],float32[:])', '(complex128[:,:],float64[:])'],
-        '(n,n)->(n)',
-        target='parallel', cache=True
-)
-def fast_energies(Hs, Es):
-    Es[:] = np.linalg.eigvalsh(Hs[:,:])
+    g12[0] = 1e8 * (1 - np.abs(link0011)) - 0.5 * (g11_ + g22_)
 
 def make_hamiltonians_single(model, xv, yv):
-    xo = np.array([0, 1e-7, 1e-7, 0])
-    yo = np.array([0, 0, 1e-7, 1e-7])
+    xo = np.array([0, 1e-4, 1e-4, 0])
+    yo = np.array([0, 0, 1e-4, 1e-4])
     return model.hamiltonian(xv[...,np.newaxis] + xo, yv[...,np.newaxis] + yo)
 
 def make_hamiltonians_sweep(modelf, paramvs, xv, yv):

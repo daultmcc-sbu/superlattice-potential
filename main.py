@@ -5,7 +5,7 @@ from matplotlib import colors as colors
 import argparse
 
 from core import *
-from models.graphene import BernalBLG2BandModel, BernalBLG4BandModel
+from models.graphene import BernalBLG2BandModel, BernalBLG4BandModel, VELOCITY, TRIGONAL
 from models.superlattice import SuperlatticeModel
 
 
@@ -16,14 +16,18 @@ from models.superlattice import SuperlatticeModel
 ALPHA = 0.3
 
 def make_model(sl_pot, disp_pot, scale, radius, four_band=False):
+        scale = 2 * np.pi / scale
+        velocity = VELOCITY * scale
+        trigonal = TRIGONAL * scale
+
         if four_band:
-            continuum = BernalBLG4BandModel(il_potential=disp_pot, dtype=np.complex128)
+            continuum = BernalBLG4BandModel(il_potential=disp_pot, velocity=velocity, trigonal=trigonal, dtype=np.complex128)
             sl_potential = np.diag(np.array([ALPHA * sl_pot, ALPHA * sl_pot, sl_pot, sl_pot], dtype=np.complex128)) 
         else:    
-            continuum = BernalBLG2BandModel(il_potential=disp_pot, dtype=np.complex128)
-            sl_potential = np.diag(np.array([sl_pot, ALPHA * sl_pot], dtype=np.complex128))
+            continuum = BernalBLG2BandModel(il_potential=disp_pot, velocity=velocity, trigonal=trigonal, dtype=np.complex128)
+            sl_potential = np.diag(np.array([ALPHA * sl_pot, sl_pot], dtype=np.complex128))
 
-        lattice = TriangularLattice(2 * np.pi / scale)
+        lattice = TriangularLattice(1)
         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
 
 
@@ -44,7 +48,7 @@ def band_from_offset(args):
 ##############
 
 def bz_sc(args):
-    model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.four_band)
+    model = make_model(args.sl_pot * 1e-3, args.disp_pot * 1e-3, args.scale, args.radius, args.four_band)
     band = band_from_offset(args)
     fig = make_plot_band_geometry(model, band, args.zoom, args.bz_res, args.struct_res)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}$")
@@ -54,10 +58,11 @@ def scan_sc(args):
     def modelf(sl_pot, disp_pot):
         return make_model(sl_pot, disp_pot, args.scale, args.radius, args.four_band)
     band = band_from_offset(args)
-    fig = make_plot_sweep_parameters_2d(modelf, band, 
-                        args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
-                        args.disp_min, args.disp_max, args.disp_n, "$V_0$",
-                        spacing = 2*np.pi / args.scale / args.bz_quality)
+    fig = make_plot_sweep_parameters_2d(modelf, band,
+                        args.sl_min * 1e-3, args.sl_max * 1e-3, args.sl_n, "$V_{SL}$",
+                        args.disp_min * 1e-3, args.disp_max * 1e-3, args.disp_n, "$V_0$",
+                        spacing = 1 / args.bz_quality)
+                        # spacing = 2*np.pi / args.scale / args.bz_quality)
     return fig
 
 if __name__ == '__main__':
@@ -65,7 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output-file', default=None)
     parser.add_argument('-4', '--four-band', action='store_true')
     parser.add_argument('-r', '--radius', type=int, default=3)
-    parser.add_argument('-s', '--scale', type=float, default=500.0)
+    parser.add_argument('-s', '--scale', type=float, default=50.0)
     subparsers = parser.add_subparsers(required=True)
 
     parser_bz = subparsers.add_parser("bz")
