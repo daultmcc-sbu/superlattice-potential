@@ -5,7 +5,7 @@ from matplotlib import colors as colors
 import argparse
 
 from core import *
-from models.graphene import BernalBLG2BandModel, BernalBLG4BandModel, VELOCITY, TRIGONAL
+from models.graphene import BernalBLG2BandModel, BernalBLG4BandModel, LATTICE_CONST, GAMMA0, GAMMA1, GAMMA3, GAMMA4
 from models.superlattice import SuperlatticeModel
 
 
@@ -15,16 +15,14 @@ from models.superlattice import SuperlatticeModel
 
 ALPHA = 0.3
 
-def make_model(sl_pot, disp_pot, scale, radius, four_band=False):
-        scale = 2 * np.pi / scale
-        velocity = VELOCITY * scale
-        trigonal = TRIGONAL * scale
+def make_model(sl_pot, disp_pot, scale, radius, four_band=False, gamma0=GAMMA0, gamma1=GAMMA1, gamma3=GAMMA3, gamma4=GAMMA4):
+        scale = 4 * np.pi / np.sqrt(3) / scale
 
         if four_band:
-            continuum = BernalBLG4BandModel(il_potential=disp_pot, velocity=velocity, trigonal=trigonal, dtype=np.complex128)
+            continuum = BernalBLG4BandModel(il_potential=disp_pot, lattice_const=LATTICE_CONST * scale)
             sl_potential = np.diag(np.array([ALPHA * sl_pot, ALPHA * sl_pot, sl_pot, sl_pot], dtype=np.complex128)) 
         else:    
-            continuum = BernalBLG2BandModel(il_potential=disp_pot, velocity=velocity, trigonal=trigonal, dtype=np.complex128)
+            continuum = BernalBLG2BandModel(il_potential=disp_pot, lattice_const=LATTICE_CONST * scale)
             sl_potential = np.diag(np.array([ALPHA * sl_pot, sl_pot], dtype=np.complex128))
 
         lattice = TriangularLattice(1)
@@ -48,7 +46,8 @@ def band_from_offset(args):
 ##############
 
 def bz_sc(args):
-    model = make_model(args.sl_pot * 1e-3, args.disp_pot * 1e-3, args.scale, args.radius, args.four_band)
+    model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, 
+                       args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     band = band_from_offset(args)
     fig = make_plot_band_geometry(model, band, args.zoom, args.bz_res, args.struct_res)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}$")
@@ -56,13 +55,14 @@ def bz_sc(args):
 
 def scan_sc(args):
     def modelf(sl_pot, disp_pot):
-        return make_model(sl_pot, disp_pot, args.scale, args.radius, args.four_band)
+        return make_model(sl_pot, disp_pot, args.scale, args.radius,
+                          args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
+    
     band = band_from_offset(args)
     fig = make_plot_sweep_parameters_2d(modelf, band,
-                        args.sl_min * 1e-3, args.sl_max * 1e-3, args.sl_n, "$V_{SL}$",
-                        args.disp_min * 1e-3, args.disp_max * 1e-3, args.disp_n, "$V_0$",
+                        args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
+                        args.disp_min, args.disp_max, args.disp_n, "$V_0$",
                         spacing = 1 / args.bz_quality)
-                        # spacing = 2*np.pi / args.scale / args.bz_quality)
     return fig
 
 if __name__ == '__main__':
@@ -71,6 +71,10 @@ if __name__ == '__main__':
     parser.add_argument('-4', '--four-band', action='store_true')
     parser.add_argument('-r', '--radius', type=int, default=3)
     parser.add_argument('-s', '--scale', type=float, default=50.0)
+    parser.add_argument('-g0', '--gamma0', type=float, default=GAMMA0)
+    parser.add_argument('-g1', '--gamma1', type=float, default=GAMMA1)
+    parser.add_argument('-g3', '--gamma3', type=float, default=GAMMA3)
+    parser.add_argument('-g4', '--gamma4', type=float, default=GAMMA4)
     subparsers = parser.add_subparsers(required=True)
 
     parser_bz = subparsers.add_parser("bz")
