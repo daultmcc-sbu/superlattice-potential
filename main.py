@@ -15,17 +15,21 @@ from models.superlattice import SuperlatticeModel
 
 ALPHA = 0.3
 
-def make_model(sl_pot, disp_pot, scale, radius, four_band=False, gamma0=GAMMA0, gamma1=GAMMA1, gamma3=GAMMA3, gamma4=GAMMA4):
-        scale = 4 * np.pi / np.sqrt(3) / scale
+def make_model(sl_pot, disp_pot, scale, radius, square, four_band=False, gamma0=GAMMA0, gamma1=GAMMA1, gamma3=GAMMA3, gamma4=GAMMA4):
+        if square:
+            lattice = SquareLattice(1)
+            scale = 2 * np.pi / scale 
+        else:
+            lattice = TriangularLattice(1)
+            scale = 4 * np.pi / np.sqrt(3) / scale
 
         if four_band:
-            continuum = BernalBLG4BandModel(il_potential=disp_pot, lattice_const=LATTICE_CONST * scale)
+            continuum = BernalBLG4BandModel(disp_pot, LATTICE_CONST * scale, gamma0, gamma1, gamma3, gamma4)
             sl_potential = np.diag(np.array([ALPHA * sl_pot, ALPHA * sl_pot, sl_pot, sl_pot], dtype=np.complex128)) 
         else:    
-            continuum = BernalBLG2BandModel(il_potential=disp_pot, lattice_const=LATTICE_CONST * scale)
+            continuum = BernalBLG2BandModel(disp_pot, LATTICE_CONST * scale, gamma0, gamma1, gamma3, gamma4)
             sl_potential = np.diag(np.array([ALPHA * sl_pot, sl_pot], dtype=np.complex128))
 
-        lattice = TriangularLattice(1)
         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
 
 
@@ -36,7 +40,7 @@ def make_model(sl_pot, disp_pot, scale, radius, four_band=False, gamma0=GAMMA0, 
 ###################
 
 def band_from_offset(args):
-    return make_model(0.005, -0.010, args.scale, args.radius, args.four_band).lowest_pos_band() + args.band_offset
+    return make_model(0.005, -0.010, args.scale, args.radius, args.square, args.four_band).lowest_pos_band() + args.band_offset
 
 
 
@@ -46,7 +50,7 @@ def band_from_offset(args):
 ##############
 
 def bz_sc(args):
-    model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, 
+    model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.square,
                        args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     band = band_from_offset(args)
     fig = make_plot_band_geometry(model, band, args.zoom, args.bz_res, args.struct_res)
@@ -55,7 +59,7 @@ def bz_sc(args):
 
 def scan_sc(args):
     def modelf(sl_pot, disp_pot):
-        return make_model(sl_pot, disp_pot, args.scale, args.radius,
+        return make_model(sl_pot, disp_pot, args.scale, args.radius, args.square,
                           args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     
     band = band_from_offset(args)
@@ -71,6 +75,7 @@ if __name__ == '__main__':
     parser.add_argument('-4', '--four-band', action='store_true')
     parser.add_argument('-r', '--radius', type=int, default=3)
     parser.add_argument('-s', '--scale', type=float, default=50.0)
+    parser.add_argument('-sq', '--square', action='store_true')
     parser.add_argument('-g0', '--gamma0', type=float, default=GAMMA0)
     parser.add_argument('-g1', '--gamma1', type=float, default=GAMMA1)
     parser.add_argument('-g3', '--gamma3', type=float, default=GAMMA3)

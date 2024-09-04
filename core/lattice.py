@@ -57,8 +57,8 @@ class SquareLattice(Lattice):
     def __init__(self, a):
         adjacents = [[1,0],[0,1],[-1,0],[0,-1]]
         self.G = np.zeros(2)
-        self.X = np.array([a,0])
-        self.M = np.array([a,a])
+        self.X = np.array([a/2,0])
+        self.M = np.array([a/2,a/2])
         hs_points = [self.G, self.X, self.M]
         hs_labels = [r"$\Gamma$", "X", "M"]
         bz_mat = [[1/a, 0], [0, 1/a]]
