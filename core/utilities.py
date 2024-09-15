@@ -1,9 +1,6 @@
 import numpy as np
+from math import ceil
 from matplotlib.colors import hsv_to_rgb
-
-def mod_pi(x):
-    y = x / 2 / np.pi
-    return 2 * np.pi * (y - np.round(y))
 
 def remove_outliers(points, fraction=0.02):
     n = np.maximum(1, int(points.size * fraction))
@@ -25,3 +22,41 @@ def complex_to_rgb(z):
     h = np.angle(z) / 2 / np.pi + 0.5
     hsv = np.stack([h,s,v], axis=-1)
     return hsv_to_rgb(hsv)
+
+def subplots_size(n):
+    return (ceil(n / 2), 2)
+
+class Register(type):
+    registry = None
+
+    def id_from_name(name):
+        return name
+    
+    def __new__(cls, name, bases, attrs, id=None, register=True):
+        newcls = super().__new__(cls, name, bases, attrs)
+
+        if id is None:
+            id = cls.id_from_name(name)
+
+        if register:
+            cls.registry[id] = newcls
+
+        return newcls
+
+class cached_property(object):
+    _missing = object()
+
+    def __init__(self, func, name=None, doc=None):
+        self.__name__ = name or func.__name__
+        self.__module__ = func.__module__
+        self.__doc__ = doc or func.__doc__
+        self.func = func
+
+    def __get__(self, obj, type=None):
+        if obj is None:
+            return self
+        value = obj.__dict__.get(self.__name__, self._missing)
+        if value is self._missing:
+            value = self.func(obj)
+            obj.__dict__[self.__name__] = value
+        return value

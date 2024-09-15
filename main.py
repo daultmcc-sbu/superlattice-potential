@@ -53,8 +53,9 @@ def bz_sc(args):
     model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.square,
                        args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     band = band_from_offset(args)
-    fig = make_plot_band_geometry(model, band, args.zoom, args.bz_res, args.struct_res)
-    fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}$")
+    subplots = [bz_subplots[id] for id in args.subplots.split(',')]
+    fig, bd = make_plot_band_geometry(model, band, args.zoom, args.bz_res, args.struct_res, subplots)
+    fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}, C = {round(bd.chern)}$")
     return fig
 
 def scan_sc(args):
@@ -63,10 +64,11 @@ def scan_sc(args):
                           args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     
     band = band_from_offset(args)
+    subplots = [scan_subplots[id] for id in args.subplots.split(',')]
     fig = make_plot_sweep_parameters_2d(modelf, band,
                         args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
                         args.disp_min, args.disp_max, args.disp_n, "$V_0$",
-                        spacing = 1 / args.bz_quality)
+                        subplots, spacing = 1 / args.bz_quality)
     return fig
 
 if __name__ == '__main__':
@@ -89,6 +91,7 @@ if __name__ == '__main__':
     parser_bz.add_argument('-bn', '--bz-res', type=int, default=50)
     parser_bz.add_argument('-sn', '--struct-res', type=int, default=100)
     parser_bz.add_argument('-b', '--band-offset', type=int, default=0)
+    parser_bz.add_argument('-p', '--subplots', type=str, default="berry,qgteigval")
     parser_bz.set_defaults(func=bz_sc)
 
     parser_scan = subparsers.add_parser("scan")
@@ -100,6 +103,7 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_n', type=int)
     parser_scan.add_argument('-bq', '--bz-quality', type=int, default=10)
     parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
+    parser_scan.add_argument('-p', '--subplots', type=str, default="width,gap,chern")
     parser_scan.set_defaults(func=scan_sc)
 
     args = parser.parse_args()

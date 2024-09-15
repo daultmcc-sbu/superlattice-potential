@@ -1,5 +1,4 @@
 import numpy as np
-from .utilities import mod_pi
 
 class Model:
     def spectrum(self, x, y):
@@ -33,10 +32,10 @@ class Model:
             [g11, g12 + 0.5j * berry_curv],
             [g12 - 0.5j * berry_curv, g22]
             ], dtype=self.dtype)
-    
+
     def lowest_pos_band(self):
         return np.argmax(self.spectrum(0,0) > 0)
-    
+
     def gaps(self, x, y, band):
         spec = self.spectrum(x, y)
         return (spec[...,band + 1] - spec[...,band], spec[...,band] - spec[...,band-1])

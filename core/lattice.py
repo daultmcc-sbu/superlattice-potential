@@ -5,6 +5,7 @@ class Lattice:
         self.a1 = np.array(a1)
         self.a2 = np.array(a2)
         self.trans = np.array([a1,a2]).T
+        self.bz_area = np.linalg.det(self.trans)
         self.adjacents = np.array(adjacents)
         self.bz_mat = np.array(bz_mat)
         self.hs_points = np.array(hs_points)
