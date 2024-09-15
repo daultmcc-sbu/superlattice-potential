@@ -1,9 +1,9 @@
 import numpy as np
-from matplotlib.colors import BoundaryNorm
+from matplotlib.colors import BoundaryNorm, LogNorm
 import matplotlib.pyplot as plt
 
-from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, subplots_size
-from .plotting import Subplot2D, make_subplots_2d
+from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, auto_subplots, remove_outliers
+from .plotting import Subplot2D
 from .banddata import BandData
 
 def make_plot_sweep_parameters_2d(modelf, band,
@@ -16,18 +16,28 @@ def make_plot_sweep_parameters_2d(modelf, band,
     av, bv = np.meshgrid(a, b, indexing='ij')
 
     xf, yf = m0.lattice.bz_grid(spacing)
+    bzsize = xf.size
+    xf = np.append(xf, m0.lattice.hs_points[:,0])
+    yf = np.append(yf, m0.lattice.hs_points[:,1])
+    in_bz = np.arange(xf.size) < bzsize
 
     subplots = [plot(an, bn) for plot in subplots]
 
     for i in range(an):
         for j in range(bn):
-            bd = BandData(modelf(a[i], b[j]), xf, yf, band)
+            bd = BandData(modelf(a[i], b[j]), xf, yf, band, in_bz)
 
             for plot in subplots:
                 plot.update(i, j, bd)
 
-    fig, axs = plt.subplots(*subplots_size(len(subplots)))
-    make_subplots_2d(av, bv, subplots, fig, axs.flat, alabel, blabel)
+    fig, axs = auto_subplots(plt, len(subplots))
+    for plot, ax in zip(subplots, axs.flat):
+        plot.finalize()
+        plot.draw(av, bv, fig, ax)
+        ax.set_xlabel(alabel)
+        ax.set_ylabel(blabel)
+
+    plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.95)
 
     return fig
 
@@ -40,11 +50,14 @@ class RegisterScanSubplots(Register):
         return name.removesuffix('ScanSubplot').lower()
 
 class ScanSubplot(Subplot2D, metaclass=RegisterScanSubplots, register=False):
-    def __init__(self, xn, yn):
-        self.data = np.zeros((xn, yn))
+    def __init__(self, an, bn):
+        self.data = np.zeros((an, bn))
 
     def update(self, i, j, bd):
         self.data[i,j] = self.compute(bd)
+
+    def finalize(self):
+        pass
 
 class GapScanSubplot(ScanSubplot):
     title = "Band gap"
@@ -69,12 +82,18 @@ class ChernScanSubplot(ScanSubplot):
 
 class BerryStdevScanSubplot(ScanSubplot):
     title = "Berry curvature stdev"
+    colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
-        return np.stdev(bd.berry)
+        return bd.berry.std()
+    
+    def finalize(self):
+        body = remove_outliers(self.data)
+        self.colormesh_opts['norm'] = LogNorm(vmin=body.min(), vmax=body.max())
 
 class TrViolIsoScanSubplot(ScanSubplot):
     title = "Trace cond viol (isometric)"
+    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
 
     def compute(self, bd):
         viol = np.abs(np.tensordot(bd.qm, np.identity(2))) - np.abs(bd.berry)
@@ -82,7 +101,7 @@ class TrViolIsoScanSubplot(ScanSubplot):
 
 class TrViolMinScanSubplot(ScanSubplot):
     title = "Trace cond viol (min)"
-    colormesh_opts = {'vmin': 0, 'vmax': 10}
+    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.qgt_bzmin_eigvec)
@@ -91,7 +110,7 @@ class TrViolMinScanSubplot(ScanSubplot):
 
 class TrViolAvgScanSubplot(ScanSubplot):
     title = "Trace cond viol (avg)"
-    colormesh_opts = {'vmin': 0, 'vmax': 10}
+    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)

@@ -23,8 +23,10 @@ def complex_to_rgb(z):
     hsv = np.stack([h,s,v], axis=-1)
     return hsv_to_rgb(hsv)
 
-def subplots_size(n):
-    return (ceil(n / 2), 2)
+def auto_subplots(plt, n, size=3):
+    cols = ceil(np.sqrt(n))
+    rows = ceil(n / cols)
+    return plt.subplots(rows, cols, figsize=(rows*size,cols*size))
 
 class Register(type):
     registry = None

@@ -60,26 +60,10 @@ def plot_bandstructure(model, n, ax, highlight=None):
     ax.set_title("Band structure")
     ax.set_ylabel("Energy")
 
-def plots_2d(xv, yv, data, fig, axs, axlabels, xlabel, ylabel, opts=itertools.cycle([{}]), blur=False):
-    cbs = []
-    for ax, z, name, kwargs in zip(axs, data, axlabels, opts):
-        # z[is_outlier(z)] = np.nan
-        mesh = ax.pcolormesh(xv, yv, z, 
-                             shading='gouraud' if blur else 'auto', **kwargs)
-        cb = fig.colorbar(mesh, ax=ax)
-        cbs.append(cb)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_title(name)
-    return cbs
-
 class Subplot2D:
     colormesh_opts = {}
     colorbar = True
     title = ""
-
-    def final_data(self):
-        return self.data
     
     def cb_post(self, cb):
         pass
@@ -87,13 +71,10 @@ class Subplot2D:
     def ax_post(self, ax):
         pass
 
-def make_subplots_2d(xv, yv, subplots, fig, axs, xlabel, ylabel):
-    for ax, subplot in zip(axs, subplots):
-        mesh = ax.pcolormesh(xv, yv, subplot.final_data(), **subplot.colormesh_opts)
-        if subplot.colorbar:
+    def draw(self, xv, yv, fig, ax):
+        mesh = ax.pcolormesh(xv, yv, self.data, **self.colormesh_opts)
+        if self.colorbar:
             cb = fig.colorbar(mesh, ax=ax)
-            subplot.cb_post(cb)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_title(subplot.title)
-        subplot.ax_post(ax)
+            self.cb_post(cb)
+        ax.set_title(self.title)
+        self.ax_post(ax)

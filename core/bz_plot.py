@@ -4,11 +4,11 @@ from matplotlib import patches
 from matplotlib.colors import CenteredNorm
 
 from .banddata import BandData
-from .utilities import Register, subplots_size, tr_form_from_eigvec, complex_to_rgb
-from .plotting import Subplot2D, plot_bandstructure, make_subplots_2d
+from .utilities import Register, auto_subplots, tr_form_from_eigvec, complex_to_rgb
+from .plotting import Subplot2D, plot_bandstructure
 
 def make_plot_band_geometry(model, band, zoom, bn, sn, subplots):
-    fig, axs = plt.subplots(*subplots_size(len(subplots) + 1))
+    fig, axs = auto_subplots(plt, len(subplots) + 1)
     plot_bandstructure(model, sn, axs.flat[0], highlight=band)
 
     size = zoom * np.max(np.abs(model.lattice.trans @ np.array([1,1])))
@@ -19,7 +19,10 @@ def make_plot_band_geometry(model, band, zoom, bn, sn, subplots):
 
     bd = BandData(model, xv, yv, band, in_bz)
     subplots = [plot(bd) for plot in subplots]
-    make_subplots_2d(xv, yv, subplots, fig, axs.flat[1:], r"$k_x$", r"$k_y$")
+    for plot, ax in axs.flat[1:]:
+        plot.draw(fig, ax)
+        ax.set_xlabel(r"$k_x$")
+        ax.set_ylabel(r"$k_y$")
 
     return fig, bd
 
