@@ -53,8 +53,8 @@ def bz_sc(args):
     model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.square,
                        args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     band = band_from_offset(args)
-    subplots = [bz_subplots[id] for id in args.subplots.split(',')]
-    fig, bd = make_plot_band_geometry(model, band, args.zoom, args.bz_res, args.struct_res, subplots)
+    subplots = [single_subplots[id] for id in args.subplots.split(',')]
+    fig, bd = make_plot_single(model, band, args.zoom, args.bz_res, args.struct_res, subplots)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}, C = {round(bd.chern)}$")
     return fig
 
@@ -65,7 +65,7 @@ def scan_sc(args):
     
     band = band_from_offset(args)
     subplots = [scan_subplots[id] for id in args.subplots.split(',')]
-    fig = make_plot_sweep_parameters_2d(modelf, band,
+    fig = make_plot_scan(modelf, band,
                         args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
                         args.disp_min, args.disp_max, args.disp_n, "$V_0$",
                         subplots, spacing = 1 / args.bz_quality)
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     parser.add_argument('-g4', '--gamma4', type=float, default=GAMMA4)
     subparsers = parser.add_subparsers(required=True)
 
-    parser_bz = subparsers.add_parser("bz")
+    parser_bz = subparsers.add_parser("single")
     parser_bz.add_argument('sl_pot', type=float)
     parser_bz.add_argument('disp_pot', type=float)
     parser_bz.add_argument('-z', '--zoom', type=float, default=0.6)

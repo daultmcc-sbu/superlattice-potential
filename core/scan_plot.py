@@ -6,7 +6,7 @@ from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, auto_subpl
 from .plotting import Subplot2D
 from .banddata import BandData
 
-def make_plot_sweep_parameters_2d(modelf, band,
+def make_plot_scan(modelf, band,
         amin, amax, an, alabel, bmin, bmax, bn, blabel, subplots,
         spacing):
     m0 = modelf(0,0)
@@ -21,7 +21,7 @@ def make_plot_sweep_parameters_2d(modelf, band,
     yf = np.append(yf, m0.lattice.hs_points[:,1])
     in_bz = np.arange(xf.size) < bzsize
 
-    subplots = [plot(an, bn) for plot in subplots]
+    subplots = [plot(av, bv, alabel, blabel) for plot in subplots]
 
     for i in range(an):
         for j in range(bn):
@@ -33,9 +33,7 @@ def make_plot_sweep_parameters_2d(modelf, band,
     fig, axs = auto_subplots(plt, len(subplots))
     for plot, ax in zip(subplots, axs.flat):
         plot.finalize()
-        plot.draw(av, bv, fig, ax)
-        ax.set_xlabel(alabel)
-        ax.set_ylabel(blabel)
+        plot.draw(fig, ax)
 
     plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.95)
 
@@ -50,8 +48,12 @@ class RegisterScanSubplots(Register):
         return name.removesuffix('ScanSubplot').lower()
 
 class ScanSubplot(Subplot2D, metaclass=RegisterScanSubplots, register=False):
-    def __init__(self, an, bn):
-        self.data = np.zeros((an, bn))
+    def __init__(self, av, bv, alabel, blabel):
+        self.data = np.zeros(av.shape)
+        self.xv = av
+        self.yv = bv
+        self.xlabel = alabel
+        self.ylabel = blabel
 
     def update(self, i, j, bd):
         self.data[i,j] = self.compute(bd)
@@ -126,35 +128,30 @@ class TrViolOptScanSubplot(ScanSubplot):
         viol = np.abs(np.tensordot(bd.qm, form) - bd.berry)
         return np.sum(viol) * bd.sample_area
     
-class CstructMinScanSubplot(ScanSubplot):
-    title = "Complex struct (min)"
+class CstructScanSubplot(ScanSubplot, register=False):
     colorbar = False
 
-    def __init__(self, xn, yn):
-        self.data = np.zeros((xn, yn, 3))
+    def __init__(self, av, bv, alabel, blabel):
+        super().__init__(self, av, bv, alabel, blabel)
+        self.data = np.zeros(av.shape + (3,))
+    
+class CstructMinScanSubplot(CstructScanSubplot):
+    title = "Complex struct (min)"
 
     def compute(self, bd):
         w = bd.qgt_bzmin_eigvec
         return complex_to_rgb(w[1] / w[0])
     
-class CstructAvgScanSubplot(ScanSubplot):
+class CstructAvgScanSubplot(CstructScanSubplot):
     title = "Complex struct (avg)"
-    colorbar = False
-
-    def __init__(self, xn, yn):
-        self.data = np.zeros((xn, yn, 3))
-
+    
     def compute(self, bd):
         w = bd.avg_qgt_eigvec
         return complex_to_rgb(w[1] / w[0])
     
-class CstructOptScanSubplot(ScanSubplot):
+class CstructOptScanSubplot(CstructScanSubplot):
     title = "Complex struct (opt)"
-    colorbar = False
-
-    def __init__(self, xn, yn):
-        self.data = np.zeros((xn, yn, 3))
-
+    
     def compute(self, bd):
         z = bd.optimal_cstruct
         return complex_to_rgb(z[0] + 1j * z[1])

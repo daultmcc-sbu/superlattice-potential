@@ -63,7 +63,9 @@ def plot_bandstructure(model, n, ax, highlight=None):
 class Subplot2D:
     colormesh_opts = {}
     colorbar = True
-    title = ""
+    title = None
+    xlabel = None
+    ylabel = None
     
     def cb_post(self, cb):
         pass
@@ -71,10 +73,15 @@ class Subplot2D:
     def ax_post(self, ax):
         pass
 
-    def draw(self, xv, yv, fig, ax):
-        mesh = ax.pcolormesh(xv, yv, self.data, **self.colormesh_opts)
+    def draw(self, fig, ax):
+        mesh = ax.pcolormesh(self.xv, self.yv, self.data, **self.colormesh_opts)
         if self.colorbar:
             cb = fig.colorbar(mesh, ax=ax)
             self.cb_post(cb)
-        ax.set_title(self.title)
+        if self.title is not None:
+            ax.set_title(self.title)
+        if self.xlabel is not None:
+            ax.set_xlabel(self.xlabel)
+        if self.ylabel is not None:
+            ax.set_ylabel(self.ylabel)
         self.ax_post(ax)
