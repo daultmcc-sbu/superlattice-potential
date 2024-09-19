@@ -7,13 +7,20 @@ def remove_outliers(points, fraction=0.02):
     sorted = np.sort(points)
     return sorted[:-n]
 
-def tr_form_from_eigvec(eigvec):
-    cross = np.conjugate(eigvec[0]) * eigvec[1]
-    sqrt_det = np.imag(cross)
-    base = np.array([
-         [np.abs(eigvec[0])**2, np.real(cross)],
-         [np.real(cross), np.abs(eigvec[1])**2]], dtype=eigvec.dtype)
-    return base / sqrt_det
+# def tr_form_from_eigvec(eigvec):
+#     cross = np.conjugate(eigvec[0]) * eigvec[1]
+#     sqrt_det = np.imag(cross)
+#     base = np.array([
+#          [np.abs(eigvec[0])**2, np.real(cross)],
+#          [np.real(cross), np.abs(eigvec[1])**2]], dtype=eigvec.dtype)
+#     return base / sqrt_det
+
+def tr_form_from_ratio(zr, zi):
+    return np.array([[1, zr], [zr, zr*zr + zi*zi]]) / zi
+
+def tr_form_from_eigvec(vec):
+    z = vec[1] / vec[0]
+    return tr_form_from_ratio(np.real(z), np.imag(z))
 
 def complex_to_rgb(z):
     l = 2 * np.arctan(np.abs(z)) / np.pi
@@ -26,7 +33,7 @@ def complex_to_rgb(z):
 def auto_subplots(plt, n, size=3):
     cols = ceil(np.sqrt(n))
     rows = ceil(n / cols)
-    return plt.subplots(rows, cols, figsize=(rows*size,cols*size))
+    return plt.subplots(rows, cols, figsize=(cols*size,rows*size))
 
 class Register(type):
     registry = None

@@ -2,7 +2,7 @@ import numpy as np
 from matplotlib.colors import BoundaryNorm, LogNorm
 import matplotlib.pyplot as plt
 
-from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, auto_subplots, remove_outliers
+from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, auto_subplots, remove_outliers, tr_form_from_ratio
 from .plotting import Subplot2D
 from .banddata import BandData
 
@@ -117,6 +117,15 @@ class TrViolAvgScanSubplot(ScanSubplot):
         viol = np.abs(np.tensordot(bd.qm, form)) - np.abs(bd.berry)
         return np.sum(viol) * bd.sample_area
     
+class TrViolOptScanSubplot(ScanSubplot):
+    title = "Trace cond viol (opt)"
+    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
+
+    def compute(self, bd):
+        form = tr_form_from_ratio(*bd.optimal_cstruct)
+        viol = np.abs(np.tensordot(bd.qm, form) - bd.berry)
+        return np.sum(viol) * bd.sample_area
+    
 class CstructMinScanSubplot(ScanSubplot):
     title = "Complex struct (min)"
     colorbar = False
@@ -138,3 +147,14 @@ class CstructAvgScanSubplot(ScanSubplot):
     def compute(self, bd):
         w = bd.avg_qgt_eigvec
         return complex_to_rgb(w[1] / w[0])
+    
+class CstructOptScanSubplot(ScanSubplot):
+    title = "Complex struct (opt)"
+    colorbar = False
+
+    def __init__(self, xn, yn):
+        self.data = np.zeros((xn, yn, 3))
+
+    def compute(self, bd):
+        z = bd.optimal_cstruct
+        return complex_to_rgb(z[0] + 1j * z[1])

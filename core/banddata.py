@@ -1,6 +1,7 @@
 import numpy as np
 import numba as nb
 import numpy.ma as ma
+import scipy.optimize as opt
 
 from .utilities import *
 
@@ -110,3 +111,13 @@ class BandData:
     @cached_property
     def qgt_bzmin_eigvec(self):
         return np.linalg.eigh(self.qgt.reshape((-1,2,2))[self.qgt_min_eigval_index])[1][:,0]
+    
+    @cached_property
+    def optimal_cstruct(self):
+        def fun(z):
+            form = tr_form_from_ratio(z[0], z[1])
+            return np.sum(np.abs(np.tensordot(self.qm, form) - self.berry))
+        # res = opt.minimize(fun, np.array([0,1]))
+        res = opt.shgo(fun, [(-5,5), (-5,5)], sampling_method='halton')
+        # print(res.message)
+        return res.x
