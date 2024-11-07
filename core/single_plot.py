@@ -7,6 +7,11 @@ from .banddata import BandData
 from .utilities import Register, auto_subplots, tr_form_from_eigvec, complex_to_rgb, tr_form_from_ratio
 from .plotting import Subplot2D, plot_bandstructure
 
+
+##############
+#### MAIN ####
+##############
+
 def make_plot_single(model, band, zoom, bn, sn, subplots):
     fig, axs = auto_subplots(plt, len(subplots) + 1, size=4.5)
     plot_bandstructure(model, sn, axs.flat[0], highlight=band)
@@ -24,6 +29,13 @@ def make_plot_single(model, band, zoom, bn, sn, subplots):
 
     return fig, bd
 
+
+
+
+#######################
+#### SUBPLOT SETUP ####
+#######################
+
 single_subplots = {}
 
 class RegisterSingleSubplots(Register):
@@ -40,6 +52,13 @@ class SingleSubplot(Subplot2D, metaclass=RegisterSingleSubplots, register=False)
         self.xv = bd.xv
         self.yv = bd.yv
         self.data = self.compute(bd)
+
+
+
+
+##################
+#### SUBPLOTS ####
+##################
 
 class BerrySingleSubplot(SingleSubplot):
     title = "Berry curvature"
@@ -90,6 +109,14 @@ class TrViolAvgSingleSubplot(SingleSubplot):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)
         return np.abs(np.tensordot(bd.qm, form)) - np.abs(bd.berry)
     
+class TrViolOptSingleSubplot(SingleSubplot):
+    title = "Trace cond viol (opt)"
+    colormesh_opts = {'cmap': 'plasma'}
+
+    def compute(self, bd):
+        form = tr_form_from_ratio(*bd.optimal_cstruct)
+        return np.abs(np.tensordot(bd.qm, form) - bd.berry)
+    
 class CstructSingleSubplot(SingleSubplot):
     title = "Complex struct (min)"
     colorbar = False
@@ -98,7 +125,7 @@ class CstructSingleSubplot(SingleSubplot):
         w = bd.qgt_eigvec
         return complex_to_rgb(w[...,1] / w[...,0])
     
-class TrViolByCstruct(SingleSubplot):
+class TrViolByCstructSingleSubplot(SingleSubplot):
     title = "Tr viol per cstruct"
     xlabel = r"$\Re [\omega_2/\omega_1]$"
     ylabel = r"$\Im [\omega_2/\omega_1]$"
@@ -114,4 +141,9 @@ class TrViolByCstruct(SingleSubplot):
             for j in range(N):
                 form = tr_form_from_ratio(x[i], y[j])
                 viol = np.abs(np.tensordot(bd.qm, form) - bd.berry)
-                self.data[i,j] = viol.sum() * bd.sample_area
+                self.data[i,j] = viol[bd.in_bz].sum() * bd.sample_area
+        self.minpos = bd.optimal_cstruct
+        self.size = self.xv[0,-1]
+
+    def ax_post(self, ax):
+        ax.add_patch(patches.Circle(self.minpos, radius=self.size/25, color='r'))

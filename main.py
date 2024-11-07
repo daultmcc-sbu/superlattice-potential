@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser_bz.add_argument('-bn', '--bz-res', type=int, default=50)
     parser_bz.add_argument('-sn', '--struct-res', type=int, default=100)
     parser_bz.add_argument('-b', '--band-offset', type=int, default=0)
-    parser_bz.add_argument('-p', '--subplots', type=str, default="berry,qgteigval")
+    parser_bz.add_argument('-p', '--subplots', type=str, default="berry,trviolopt,trviolbycstruct")
     parser_bz.set_defaults(func=bz_sc)
 
     parser_scan = subparsers.add_parser("scan")
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_n', type=int)
     parser_scan.add_argument('-bq', '--bz-quality', type=int, default=10)
     parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
-    parser_scan.add_argument('-p', '--subplots', type=str, default="width,gap,chern")
+    parser_scan.add_argument('-p', '--subplots', type=str, default="width,gap,chern,berrystdev,trviolopt,cstructopt")
     parser_scan.set_defaults(func=scan_sc)
 
     args = parser.parse_args()

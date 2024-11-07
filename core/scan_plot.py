@@ -6,6 +6,11 @@ from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, auto_subpl
 from .plotting import Subplot2D
 from .banddata import BandData
 
+
+##############
+#### MAIN ####
+##############
+
 def make_plot_scan(modelf, band,
         amin, amax, an, alabel, bmin, bmax, bn, blabel, subplots,
         spacing):
@@ -39,6 +44,13 @@ def make_plot_scan(modelf, band,
 
     return fig
 
+
+
+
+#######################
+#### SUBPLOT SETUP ####
+#######################
+
 scan_subplots = {}
 
 class RegisterScanSubplots(Register):
@@ -60,6 +72,20 @@ class ScanSubplot(Subplot2D, metaclass=RegisterScanSubplots, register=False):
 
     def finalize(self):
         pass
+
+class CstructScanSubplot(ScanSubplot, register=False):
+    colorbar = False
+
+    def __init__(self, av, bv, alabel, blabel):
+        super().__init__(av, bv, alabel, blabel)
+        self.data = np.zeros(av.shape + (3,))
+
+
+
+
+##################
+#### SUBPLOTS ####
+##################
 
 class GapScanSubplot(ScanSubplot):
     title = "Band gap"
@@ -127,13 +153,6 @@ class TrViolOptScanSubplot(ScanSubplot):
         form = tr_form_from_ratio(*bd.optimal_cstruct)
         viol = np.abs(np.tensordot(bd.qm, form) - bd.berry)
         return np.sum(viol) * bd.sample_area
-    
-class CstructScanSubplot(ScanSubplot, register=False):
-    colorbar = False
-
-    def __init__(self, av, bv, alabel, blabel):
-        super().__init__(self, av, bv, alabel, blabel)
-        self.data = np.zeros(av.shape + (3,))
     
 class CstructMinScanSubplot(CstructScanSubplot):
     title = "Complex struct (min)"
