@@ -42,6 +42,9 @@ def make_model(sl_pot, disp_pot, scale, radius, square, four_band=False, gamma0=
 def band_from_offset(args):
     return make_model(0.005, -0.010, args.scale, args.radius, args.square, args.four_band).lowest_pos_band() + args.band_offset
 
+def strlist(s):
+    return s.split(',')
+
 
 
 
@@ -53,7 +56,7 @@ def bz_sc(args):
     model = make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.square,
                        args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     band = band_from_offset(args)
-    subplots = [single_subplots[id] for id in args.subplots.split(',')]
+    subplots = [single_subplots[id] for id in args.subplots]
     fig, bd = make_plot_single(model, band, args.zoom, args.bz_res, args.struct_res, subplots)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}, C = {round(bd.chern)}$")
     return fig
@@ -64,10 +67,27 @@ def scan_sc(args):
                           args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     
     band = band_from_offset(args)
-    subplots = [scan_subplots[id] for id in args.subplots.split(',')]
+    subplots = [scan_subplots[id] for id in args.subplots]
     fig = make_plot_scan(modelf, band,
                         args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
                         args.disp_min, args.disp_max, args.disp_n, "$V_0$",
+                        subplots, spacing = 1 / args.bz_quality)
+    return fig
+
+def scang_sc(args):
+    gs = {'gamma0': args.gamma0, 'gamma1': args.gamma1, 'gamma3': args.gamma3, 'gamma4': args.gamma4}
+    aid = 'gamma' + args.gammas[0]
+    bid = 'gamma' + args.gammas[1]
+    def modelf(a, b):
+        gs[aid] = a
+        gs[bid] = b
+        return make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.square, args.four_band, **gs)
+    
+    band = band_from_offset(args)
+    subplots = [scan_subplots[id] for id in args.subplots]
+    fig = make_plot_scan(modelf, band,
+                        args.a_min, args.a_max, args.a_n, f"$\\gamma_{args.gammas[0]}$",
+                        args.b_min, args.b_max, args.b_n, f"$\\gamma_{args.gammas[1]}$",
                         subplots, spacing = 1 / args.bz_quality)
     return fig
 
@@ -91,7 +111,7 @@ if __name__ == '__main__':
     parser_bz.add_argument('-bn', '--bz-res', type=int, default=50)
     parser_bz.add_argument('-sn', '--struct-res', type=int, default=100)
     parser_bz.add_argument('-b', '--band-offset', type=int, default=0)
-    parser_bz.add_argument('-p', '--subplots', type=str, default="berry,trviolopt,trviolbycstruct")
+    parser_bz.add_argument('-p', '--subplots', type=strlist, default="berry,trviolopt,trviolbycstruct")
     parser_bz.set_defaults(func=bz_sc)
 
     parser_scan = subparsers.add_parser("scan")
@@ -103,8 +123,23 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_n', type=int)
     parser_scan.add_argument('-bq', '--bz-quality', type=int, default=10)
     parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
-    parser_scan.add_argument('-p', '--subplots', type=str, default="width,gap,chern,berrystdev,trviolopt,cstructopt")
+    parser_scan.add_argument('-p', '--subplots', type=strlist, default="width,gap,chern,berrystdev,trviolopt,cstructopt")
     parser_scan.set_defaults(func=scan_sc)
+
+    parser_scang = subparsers.add_parser("scang")
+    parser_scang.add_argument('sl_pot', type=float)
+    parser_scang.add_argument('disp_pot', type=float)
+    parser_scang.add_argument('gammas', type=strlist)
+    parser_scang.add_argument('a_min', type=float)
+    parser_scang.add_argument('a_max', type=float)
+    parser_scang.add_argument('a_n', type=int)
+    parser_scang.add_argument('b_min', type=float)
+    parser_scang.add_argument('b_max', type=float)
+    parser_scang.add_argument('b_n', type=int)
+    parser_scang.add_argument('-bq', '--bz-quality', type=int, default=10)
+    parser_scang.add_argument('-p', '--subplots', type=strlist, default="width,gap,chern,trviolopt")
+    parser_scang.add_argument('-b', '--band-offset', type=int, default=0)
+    parser_scang.set_defaults(func=scang_sc)
 
     args = parser.parse_args()
     fig = args.func(args)
