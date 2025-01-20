@@ -3,9 +3,9 @@ from math import ceil
 from matplotlib.colors import hsv_to_rgb
 
 def remove_outliers(points, fraction=0.02):
-    n = np.maximum(1, int(points.size * fraction))
-    sorted = np.sort(points)
-    return sorted[:-n]
+    n = int(points.size * fraction)
+    sorted = np.sort(points, axis=None)
+    return sorted[n:sorted.size-n]
 
 # def tr_form_from_eigvec(eigvec):
 #     cross = np.conjugate(eigvec[0]) * eigvec[1]
@@ -30,7 +30,7 @@ def complex_to_rgb(z):
     hsv = np.stack([h,s,v], axis=-1)
     return hsv_to_rgb(hsv)
 
-def auto_subplots(plt, n, size=3):
+def auto_subplots(plt, n, size=5):
     cols = ceil(np.sqrt(n))
     rows = ceil(n / cols)
     return plt.subplots(rows, cols, figsize=(cols*size,rows*size))

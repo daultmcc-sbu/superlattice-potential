@@ -40,7 +40,7 @@ def make_plot_scan(modelf, band,
         plot.finalize()
         plot.draw(fig, ax)
 
-    plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.95)
+    plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.90)
 
     return fig
 
@@ -91,7 +91,7 @@ class GapScanSubplot(ScanSubplot):
     title = "Band gap"
 
     def compute(self, bd):
-        return np.minimum(bd.above.min() - bd.at.max(), bd.at.min() - bd.below.max())
+        return np.maximum(0, np.minimum(bd.above.min() - bd.at.max(), bd.at.min() - bd.below.max()))
     
 class WidthScanSubplot(ScanSubplot):
     title = "Band width"
@@ -121,7 +121,7 @@ class BerryStdevScanSubplot(ScanSubplot):
 
 class TrViolIsoScanSubplot(ScanSubplot):
     title = "Trace cond viol (isometric)"
-    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
+    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
 
     def compute(self, bd):
         viol = np.abs(np.tensordot(bd.qm, np.identity(2))) - np.abs(bd.berry)
@@ -129,7 +129,7 @@ class TrViolIsoScanSubplot(ScanSubplot):
 
 class TrViolMinScanSubplot(ScanSubplot):
     title = "Trace cond viol (min)"
-    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
+    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.qgt_bzmin_eigvec)
@@ -138,7 +138,7 @@ class TrViolMinScanSubplot(ScanSubplot):
 
 class TrViolAvgScanSubplot(ScanSubplot):
     title = "Trace cond viol (avg)"
-    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
+    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)
@@ -147,7 +147,7 @@ class TrViolAvgScanSubplot(ScanSubplot):
     
 class TrViolOptScanSubplot(ScanSubplot):
     title = "Trace cond viol (opt)"
-    colormesh_opts = {'vmin': 0, 'vmax': 10, 'cmap': 'plasma'}
+    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_ratio(*bd.optimal_cstruct)
