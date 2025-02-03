@@ -65,11 +65,9 @@ def bz_sc(args):
     subplots = [single_subplots[id] for id in args.subplots]
     fig, bd = make_plot_single(model, band, args.zoom, args.bz_res, args.struct_res, subplots)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}, C = {round(bd.chern)}$")
-    print(f"Chern: {bd.chern}") 
-    print(f"Gap: {bd.gap}")
-    print(f"Width: {bd.width}")
-    print(f"Trviol: {bd.tr_viol_iso}")
-    print(f"Berryfluc: {bd.berry_fluc}")
+    for observable in args.observables:
+        observable = int_observables[observable]()
+        print(f"{observable.title}: {observable.compute(bd)}")
     return fig
 
 def scan_sc(args):
@@ -78,7 +76,7 @@ def scan_sc(args):
                           args.four_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     
     band = band_from_offset(args)
-    subplots = [scan_subplots[id] for id in args.subplots]
+    subplots = [int_observables[id] for id in args.subplots]
     fig = make_plot_scan(modelf, band,
                         args.sl_min, args.sl_max, args.sl_n, "$V_{SL}$",
                         args.disp_min, args.disp_max, args.disp_n, "$V_0$",
@@ -97,7 +95,7 @@ def scang_sc(args):
         return make_model(args.sl_pot, args.disp_pot, args.scale, args.radius, args.alpha, args.square, args.four_band, **gs)
     
     band = band_from_offset(args)
-    subplots = [scan_subplots[id] for id in args.subplots]
+    subplots = [int_observables[id] for id in args.subplots]
     fig = make_plot_scan(modelf, band,
                         args.a_min, args.a_max, args.a_n, f"$\\gamma_{args.gammas[0]}$",
                         args.b_min, args.b_max, args.b_n, f"$\\gamma_{args.gammas[1]}$",
@@ -126,6 +124,7 @@ if __name__ == '__main__':
     parser_bz.add_argument('-sn', '--struct-res', type=int, default=100)
     parser_bz.add_argument('-b', '--band-offset', type=int, default=0)
     parser_bz.add_argument('-p', '--subplots', type=strlist, default="berry,trvioliso,trviolbycstruct")
+    parser_bz.add_argument('-O', '--observables', type=strlist, default="chern,gap,width,trvioliso,berryfluc")
     parser_bz.set_defaults(func=bz_sc)
 
     parser_scan = subparsers.add_parser("scan")

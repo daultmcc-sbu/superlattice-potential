@@ -1,5 +1,5 @@
 import numpy as np
-from matplotlib.colors import BoundaryNorm, LogNorm
+from matplotlib.colors import BoundaryNorm, LogNorm, Normalize
 import matplotlib.pyplot as plt
 
 from .utilities import Register, tr_form_from_eigvec, complex_to_rgb, auto_subplots, remove_outliers, tr_form_from_ratio
@@ -26,19 +26,26 @@ def make_plot_scan(modelf, band,
     yf = np.append(yf, m0.lattice.hs_points[:,1])
     in_bz = np.arange(xf.size) < bzsize
 
-    subplots = [plot(av, bv, alabel, blabel) for plot in subplots]
+    subplots = [plot() for plot in subplots]
+    datas = [np.zeros(av.shape + plot.shape) for plot in subplots]
 
     for i in range(an):
         for j in range(bn):
             bd = BandData(modelf(a[i], b[j]), xf, yf, band, in_bz)
 
-            for plot in subplots:
-                plot.update(i, j, bd)
+            for plot, data in zip(subplots, datas):
+                data[i,j] = plot.compute(bd)
 
     fig, axs = auto_subplots(plt, len(subplots))
-    for plot, ax in zip(subplots, axs.flat):
-        plot.finalize()
-        plot.draw(fig, ax)
+    for plot, data, ax in zip(subplots, datas, axs.flat):
+        norm = plot.norm(data)
+        mesh = ax.pcolormesh(av, bv, data, norm=norm, **plot.colormesh_opts)
+        if plot.colorbar:
+            cb = fig.colorbar(mesh, ax=ax)
+        if plot.title is not None:
+            ax.set_title(plot.title)
+        ax.set_xlabel(alabel)
+        ax.set_ylabel(blabel)
 
     plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.90)
 
@@ -51,35 +58,26 @@ def make_plot_scan(modelf, band,
 #### SUBPLOT SETUP ####
 #######################
 
-scan_subplots = {}
+int_observables = {}
 
-class RegisterScanSubplots(Register):
-    registry = scan_subplots
+class RegisterIntObservables(Register):
+    registry = int_observables
 
     def id_from_name(name):
-        return name.removesuffix('ScanSubplot').lower()
+        return name.removesuffix('IntObservable').lower()
+    
+class IntObservable(metaclass=RegisterIntObservables, register=False):
+    shape = ()
 
-class ScanSubplot(Subplot2D, metaclass=RegisterScanSubplots, register=False):
-    def __init__(self, av, bv, alabel, blabel):
-        self.data = np.zeros(av.shape)
-        self.xv = av
-        self.yv = bv
-        self.xlabel = alabel
-        self.ylabel = blabel
+    colormesh_opts = {}
+    colorbar = True
+    title = None
 
-    def update(self, i, j, bd):
-        self.data[i,j] = self.compute(bd)
-
-    def finalize(self):
+    def compute(self, bd):
         pass
 
-class CstructScanSubplot(ScanSubplot, register=False):
-    colorbar = False
-
-    def __init__(self, av, bv, alabel, blabel):
-        super().__init__(av, bv, alabel, blabel)
-        self.data = np.zeros(av.shape + (3,))
-
+    def norm(self, data):
+        return Normalize()
 
 
 
@@ -88,96 +86,115 @@ class CstructScanSubplot(ScanSubplot, register=False):
 #### SUBPLOTS ####
 ##################
 
-class GapScanSubplot(ScanSubplot):
+class GapIntObservable(IntObservable):
     title = "Band gap"
 
     def compute(self, bd):
         return bd.gap
     
-class WidthScanSubplot(ScanSubplot):
+class WidthIntObservable(IntObservable):
     title = "Band width"
 
     def compute(self, bd):
         return bd.width
     
-class ChernScanSubplot(ScanSubplot):
+class ChernIntObservable(IntObservable):
     title = "Chern number"
-    colormesh_opts = {
-        'cmap': 'RdBu_r', 
-        'norm': BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')}
+    colormesh_opts = {'cmap': 'RdBu_r'}
 
     def compute(self, bd):
         return bd.chern
+    
+    def norm(self, data):
+        return BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')
 
-class BerryFlucScanSubplot(ScanSubplot):
+class BerryFlucIntObservable(IntObservable):
     title = "Berry fluc"
     colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
         return bd.berry_fluc
     
-    def finalize(self):
-        body = remove_outliers(self.data)
-        self.colormesh_opts['norm'] = LogNorm(vmin=body.min(), vmax=body.max())
+    def norm(self, data):
+        body = remove_outliers(data)
+        return LogNorm(vmin=body.min(), vmax=body.max())
 
-class BerryFlucN1ScanSubplot(ScanSubplot):
+class BerryFlucN1IntObservable(IntObservable):
     title = "Berry fluc (n1)"
     colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
         return bd.berry_fluc_n1
 
-    def finalize(self):
-        body = remove_outliers(self.data)
-        self.colormesh_opts['norm'] = LogNorm(vmin=body.min(), vmax=body.max())
+    def norm(self, data):
+        body = remove_outliers(data)
+        return LogNorm(vmin=body.min(), vmax=body.max())
 
-class TrViolIsoScanSubplot(ScanSubplot):
+class TrViolIsoIntObservable(IntObservable):
     title = "Trace cond viol (isometric)"
-    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
+    colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
         return bd.int(bd.tr_viol_iso)
+    
+    def norm(self, data):
+        return Normalize(0, 20)
 
-class TrViolMinScanSubplot(ScanSubplot):
+class TrViolMinIntObservable(IntObservable):
     title = "Trace cond viol (min)"
-    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
+    colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.qgt_bzmin_eigvec)
         return bd.int(bd.tr_viol(form))
+    
+    def norm(self, data):
+        return Normalize(0, 20)
 
-class TrViolAvgScanSubplot(ScanSubplot):
+class TrViolAvgIntObservable(IntObservable):
     title = "Trace cond viol (avg)"
-    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
+    colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)
         return bd.int(bd.tr_viol(form))
     
-class TrViolOptScanSubplot(ScanSubplot):
+    def norm(self, data):
+        return Normalize(0, 20)
+    
+class TrViolOptIntObservable(IntObservable):
     title = "Trace cond viol (opt)"
-    colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
+    colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
         form = tr_form_from_ratio(*bd.optimal_cstruct)
         return bd.int(bd.tr_viol(form))
     
-class CstructMinScanSubplot(CstructScanSubplot):
+    def norm(self, data):
+        return Normalize(0, 20)
+    
+class CstructMinIntObservable(IntObservable):
+    shape = (3,)
     title = "Complex struct (min)"
+    colorbar = False
 
     def compute(self, bd):
         w = bd.qgt_bzmin_eigvec
         return complex_to_rgb(w[1] / w[0])
     
-class CstructAvgScanSubplot(CstructScanSubplot):
+class CstructAvgIntObservable(IntObservable):
+    shape = (3,)
     title = "Complex struct (avg)"
+    colorbar = False
     
     def compute(self, bd):
         w = bd.avg_qgt_eigvec
         return complex_to_rgb(w[1] / w[0])
     
-class CstructOptScanSubplot(CstructScanSubplot):
+class CstructOptIntObservable(IntObservable):
+    shape = (3,)
     title = "Complex struct (opt)"
+    colorbar = False
     
     def compute(self, bd):
         z = bd.optimal_cstruct
