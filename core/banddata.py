@@ -23,6 +23,17 @@ class BandData:
         self.sample_area = model.lattice.bz_area / self.in_bz.sum()
         self.below, self.at, self.above, self.berry, self.g11, self.g22, self.g12 = fast_energies_and_qgt_raw(Hs, band)
 
+    def int(self, x):
+        return self.sample_area * np.sum(x[self.in_bz])
+    
+    @cached_property
+    def width(self):
+        return self.at.max() - self.at.min()
+    
+    @cached_property
+    def gap(self):
+        return np.minimum(self.above.min() - self.at.max(), self.at.min() - self.below.max())
+    
     @cached_property
     def qgt(self):
         return qgt_from_raw(self.berry, self.g11, self.g22, self.g12)
@@ -33,7 +44,7 @@ class BandData:
 
     @cached_property
     def chern(self):
-        return self.berry[self.in_bz].sum() * self.sample_area / 2 / np.pi
+        return self.int(self.berry) / 2 / np.pi
 
     @cached_property
     def qgt_eigval(self):
@@ -70,6 +81,23 @@ class BandData:
         res = opt.shgo(fun, [(-5,5), (-5,5)], sampling_method='halton')
         # print(res.message)
         return res.x
+    
+    def tr_viol(self, form):
+        return np.abs(np.tensordot(self.qm, form)) - np.abs(self.berry)
+    
+    @cached_property
+    def tr_viol_iso(self):
+        return self.tr_viol(np.identity(2))
+
+    @cached_property
+    def berry_fluc(self):
+        # diff = self.berry[self.in_bz] / 2 / np.pi - self.chern / self.sample_area / self.in_bz.sum()
+        # return np.sqrt(np.sum(diff * diff) * self.sample_area)
+        return self.berry.std() * self.model.lattice.bz_area / 2 / np.pi
+
+    @cached_property
+    def berry_fluc_n1(self):
+        return self.int(np.abs(self.berry / 2 / np.pi - self.chern / self.model.lattice.bz_area))
 
 
 

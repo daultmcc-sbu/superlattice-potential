@@ -42,11 +42,11 @@ def make_model(sl_pot, disp_pot, scale, radius, alpha, square, four_band=False, 
 #### UTILITIES ####
 ###################
 
-def band_from_offset(args):
-    return make_model(0.005, -0.010, args.scale, args.radius, args.alpha, args.square, args.four_band).lowest_pos_band() + args.band_offset
-
 # def band_from_offset(args):
-#     return int(make_model(0.005, -0.010, args.scale, args.radius, args.alpha, args.square, args.four_band).hamiltonian(0, 0).shape[0] / 2) + args.band_offset
+#     return make_model(0.005, -0.010, args.scale, args.radius, args.alpha, args.square, args.four_band).lowest_pos_band() + args.band_offset
+
+def band_from_offset(args):
+    return int(make_model(0.005, -0.010, args.scale, args.radius, args.alpha, args.square, args.four_band).hamiltonian(0, 0).shape[0] / 2) + args.band_offset
 
 def strlist(s):
     return s.split(',')
@@ -65,6 +65,11 @@ def bz_sc(args):
     subplots = [single_subplots[id] for id in args.subplots]
     fig, bd = make_plot_single(model, band, args.zoom, args.bz_res, args.struct_res, subplots)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}, C = {round(bd.chern)}$")
+    print(f"Chern: {bd.chern}") 
+    print(f"Gap: {bd.gap}")
+    print(f"Width: {bd.width}")
+    print(f"Trviol: {bd.tr_viol_iso}")
+    print(f"Berryfluc: {bd.berry_fluc}")
     return fig
 
 def scan_sc(args):
@@ -132,7 +137,7 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_n', type=int)
     parser_scan.add_argument('-bq', '--bz-quality', type=int, default=10)
     parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
-    parser_scan.add_argument('-p', '--subplots', type=strlist, default="width,gap,chern,berrystdev,trvioliso")
+    parser_scan.add_argument('-p', '--subplots', type=strlist, default="width,gap,chern,berryfluc,trvioliso")
     parser_scan.add_argument('-t', '--title')
     parser_scan.set_defaults(func=scan_sc)
 

@@ -83,6 +83,7 @@ class CstructScanSubplot(ScanSubplot, register=False):
 
 
 
+
 ##################
 #### SUBPLOTS ####
 ##################
@@ -91,13 +92,13 @@ class GapScanSubplot(ScanSubplot):
     title = "Band gap"
 
     def compute(self, bd):
-        return np.maximum(0, np.minimum(bd.above.min() - bd.at.max(), bd.at.min() - bd.below.max()))
+        return bd.gap
     
 class WidthScanSubplot(ScanSubplot):
     title = "Band width"
 
     def compute(self, bd):
-        return bd.at.max() - bd.at.min()
+        return bd.width
     
 class ChernScanSubplot(ScanSubplot):
     title = "Chern number"
@@ -108,13 +109,24 @@ class ChernScanSubplot(ScanSubplot):
     def compute(self, bd):
         return bd.chern
 
-class BerryStdevScanSubplot(ScanSubplot):
-    title = "Berry curvature stdev"
+class BerryFlucScanSubplot(ScanSubplot):
+    title = "Berry fluc"
     colormesh_opts = {'cmap': 'plasma'}
 
     def compute(self, bd):
-        return bd.berry.std()
+        return bd.berry_fluc
     
+    def finalize(self):
+        body = remove_outliers(self.data)
+        self.colormesh_opts['norm'] = LogNorm(vmin=body.min(), vmax=body.max())
+
+class BerryFlucN1ScanSubplot(ScanSubplot):
+    title = "Berry fluc (n1)"
+    colormesh_opts = {'cmap': 'plasma'}
+
+    def compute(self, bd):
+        return bd.berry_fluc_n1
+
     def finalize(self):
         body = remove_outliers(self.data)
         self.colormesh_opts['norm'] = LogNorm(vmin=body.min(), vmax=body.max())
@@ -124,8 +136,7 @@ class TrViolIsoScanSubplot(ScanSubplot):
     colormesh_opts = {'vmin': 0, 'vmax': 20, 'cmap': 'plasma'}
 
     def compute(self, bd):
-        viol = np.abs(np.tensordot(bd.qm, np.identity(2))) - np.abs(bd.berry)
-        return np.sum(viol) * bd.sample_area
+        return bd.int(bd.tr_viol_iso)
 
 class TrViolMinScanSubplot(ScanSubplot):
     title = "Trace cond viol (min)"
@@ -133,8 +144,7 @@ class TrViolMinScanSubplot(ScanSubplot):
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.qgt_bzmin_eigvec)
-        viol = np.abs(np.tensordot(bd.qm, form)) - np.abs(bd.berry)
-        return np.sum(viol) * bd.sample_area
+        return bd.int(bd.tr_viol(form))
 
 class TrViolAvgScanSubplot(ScanSubplot):
     title = "Trace cond viol (avg)"
@@ -142,8 +152,7 @@ class TrViolAvgScanSubplot(ScanSubplot):
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)
-        viol = np.abs(np.tensordot(bd.qm, form)) - np.abs(bd.berry)
-        return np.sum(viol) * bd.sample_area
+        return bd.int(bd.tr_viol(form))
     
 class TrViolOptScanSubplot(ScanSubplot):
     title = "Trace cond viol (opt)"
@@ -151,8 +160,7 @@ class TrViolOptScanSubplot(ScanSubplot):
 
     def compute(self, bd):
         form = tr_form_from_ratio(*bd.optimal_cstruct)
-        viol = np.abs(np.tensordot(bd.qm, form) - bd.berry)
-        return np.sum(viol) * bd.sample_area
+        return bd.int(bd.tr_viol(form))
     
 class CstructMinScanSubplot(CstructScanSubplot):
     title = "Complex struct (min)"

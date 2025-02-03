@@ -91,7 +91,7 @@ class TrViolIsoSingleSubplot(SingleSubplot):
     title = "Trace cond viol (isometric)"
 
     def compute(self, bd):
-        return np.abs(np.tensordot(bd.qm, np.identity(2))) - np.abs(bd.berry)
+        return bd.tr_viol_iso
 
 class TrViolMinSingleSubplot(SingleSubplot):
     title = "Trace cond viol (min)"
@@ -99,7 +99,7 @@ class TrViolMinSingleSubplot(SingleSubplot):
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.qgt_bzmin_eigvec)
-        return np.abs(np.tensordot(bd.qm, form)) - np.abs(bd.berry)
+        return bd.tr_viol(form)
 
 class TrViolAvgSingleSubplot(SingleSubplot):
     title = "Trace cond viol (avg)"
@@ -107,7 +107,7 @@ class TrViolAvgSingleSubplot(SingleSubplot):
 
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)
-        return np.abs(np.tensordot(bd.qm, form)) - np.abs(bd.berry)
+        return bd.tr_viol(form)
     
 class TrViolOptSingleSubplot(SingleSubplot):
     title = "Trace cond viol (opt)"
@@ -115,7 +115,7 @@ class TrViolOptSingleSubplot(SingleSubplot):
 
     def compute(self, bd):
         form = tr_form_from_ratio(*bd.optimal_cstruct)
-        return np.abs(np.tensordot(bd.qm, form) - bd.berry)
+        return bd.tr_viol(form)
     
 class CstructSingleSubplot(SingleSubplot):
     title = "Complex struct (min)"
