@@ -1,5 +1,6 @@
 from .lattice import Lattice, SquareLattice, TriangularLattice
 from .model import Model
-from .plotting import Path, plot_bandstructure
-from .scan_plot import int_observables, make_plot_scan
+from .int_observables import int_observables
+from .scan_plot import make_plot_scan_2d
 from .single_plot import single_subplots, make_plot_single
+from .calculate import single, scan_2d

@@ -14,6 +14,7 @@ class BandData:
     def __init__(self, model, xv, yv, band, in_bz=None):
         Hs = make_hamiltonians_single(model, xv, yv)
         self.model = model
+        self.band = band
         self.xv = xv
         self.yv = yv
         if in_bz is None:
