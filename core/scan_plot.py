@@ -21,14 +21,15 @@ def make_plot_scan_2d(av, alabel, bv, blabel, observs):
         ax.set_xlabel(alabel)
         ax.set_ylabel(blabel)
 
-    plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.90)
+    # plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.90)
 
     return fig
 
+def make_plot_scan_1d(a, alabel, observs):
+    fig, axs = auto_subplots(plt, len(observs))
+    for plot, ax in zip(observs, axs.flat):
+        ax.plot(a, plot.plotting_data())
+        ax.set_xlabel(alabel)
+        ax.set_ylabel(plot.title)
 
-
-
-#######################
-#### SUBPLOT SETUP ####
-#######################
-
+    return fig

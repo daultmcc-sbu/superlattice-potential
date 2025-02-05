@@ -44,7 +44,7 @@ def single_bz(model, band, zoom, bn):
     return BandData(model, xv, yv, band, in_bz)
 
 def scan(modelf, band, bounds, observs, spacing):
-    m0 = modelf(0,0)
+    m0 = modelf(*np.zeros(len(bounds)))
 
     marks = [np.linspace(lower, upper, n) for (lower, upper, n) in bounds]
     grids = np.meshgrid(*marks, indexing='ij')
@@ -59,7 +59,7 @@ def scan(modelf, band, bounds, observs, spacing):
 
     it = np.nditer(grids, flags=['multi_index'])
     for params in it:
-        bd = BandData(modelf(*params), xf, yf, band, in_bz)
+        bd = BandData(modelf(*np.atleast_1d(params)), xf, yf, band, in_bz)
         for observ in observs:
             observ.update(it.multi_index, bd)
 

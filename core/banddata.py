@@ -33,7 +33,7 @@ class BandData:
     
     @cached_property
     def gap(self):
-        return np.minimum(self.above.min() - self.at.max(), self.at.min() - self.below.max())
+        return np.maximum(np.minimum(self.above.min() - self.at.max(), self.at.min() - self.below.max()), 0)
     
     @cached_property
     def qgt(self):
