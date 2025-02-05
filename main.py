@@ -174,4 +174,4 @@ if __name__ == '__main__':
     if args.plot_file is None:
         plt.show()
     else:
-        fig.savefig(args.output_file)
+        fig.savefig(args.plot_file)
