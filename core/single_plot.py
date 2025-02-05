@@ -11,9 +11,9 @@ from .utilities import Register, auto_subplots, tr_form_from_eigvec, complex_to_
 #### MAIN ####
 ##############
 
-def make_plot_single(bd, sn, subplots):
+def make_plot_single(bd, ts, hs_ts, Es, subplots):
     fig, axs = auto_subplots(plt, len(subplots) + 1, size=4.5)
-    plot_bandstructure(bd.model, sn, axs.flat[0], highlight=bd.band)
+    plot_bandstructure(bd.model, ts, hs_ts, Es, axs.flat[0], highlight=bd.band)
 
     subplots = [plot(bd) for plot in subplots]
     for plot, ax in zip(subplots, axs.flat[1:]):
@@ -21,45 +21,7 @@ def make_plot_single(bd, sn, subplots):
 
     return fig
 
-
-
-
-
-########################
-#### BAND STRUCTURE ####
-########################
-
-class Path:
-    def __init__(self, vertices, closed=True):
-        vertices = list(vertices)
-
-        if closed:
-            vertices.append(vertices[0])
-        
-        self.vertices = np.array(vertices)
-        self.diffs = np.diff(self.vertices, axis=0)
-        self.dists = np.linalg.norm(self.diffs, axis=1)
-        self.length = np.sum(self.dists)
-
-    # currently does not check bounds
-    def along(self, t):
-        t *= self.length
-        for i in range(0, len(self.dists)):
-            if t > self.dists[i]:
-                t -= self.dists[i]
-            else:
-                return self.vertices[i] + self.diffs[i] * t / self.dists[i]
-
-    def points(self, n):
-        ts = np.linspace(0, 1, n)
-        points = np.array([self.along(t) for t in ts])
-        vertex_ts = np.insert(np.cumsum(self.dists) / self.length, 0, 0)
-        return ts, points, vertex_ts
-
-def plot_bandstructure(model, n, ax, highlight=None):
-    path = Path(model.lattice.hs_points)
-    ts, ks, hs_ts = path.points(n)
-    Es = model.spectrum(ks[:,0], ks[:,1])
+def plot_bandstructure(model, ts, hs_ts, Es, ax, highlight=None):
     ax.plot(ts, Es, c='k')
 
     if highlight:

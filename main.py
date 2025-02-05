@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colors as colors
 
 import argparse
+import pickle
 
 from core import *
 from models.graphene import BernalBLG2BandModel, BernalBLG4BandModel, LATTICE_CONST, GAMMA0, GAMMA1, GAMMA3, GAMMA4
@@ -63,13 +64,15 @@ def bz_sc(args):
                        args.two_band, args.gamma0, args.gamma1, args.gamma3, args.gamma4)
     band = band_from_offset(args)
     subplots = [single_subplots[id] for id in args.subplots]
-    bd = single(model, band, args.zoom, args.bz_res)
-    fig = make_plot_single(bd, args.struct_res, subplots)
+    bd = single_bz(model, band, args.zoom, args.bz_res)
+    ts, hs_ts, Es = single_bands(model, args.struct_res)
+    fig = make_plot_single(bd, ts, hs_ts, Es, subplots)
     fig.suptitle(f"$V_{{SL}} = {args.sl_pot}$, $V_0 = {args.disp_pot}, C = {round(bd.chern)}$")
     for observable in args.observables:
         observable = int_observables[observable]
         print(f"{observable.title}: {observable.compute(bd)}")
-    return fig
+    data = {'bd': bd, 'ts': ts, 'hs_ts': hs_ts, 'Es': Es}
+    return fig, data
 
 def scan_sc(args):
     def modelf(sl_pot, disp_pot):
@@ -78,13 +81,15 @@ def scan_sc(args):
     
     band = band_from_offset(args)
     observables = [int_observables[id] for id in args.observables]
-    av, bv, observs = scan_2d(modelf, band, 
-                              args.sl_min, args.sl_max, args.sl_n, args.disp_min, args.disp_max, args.disp_n, 
-                              observables, spacing = 1 / args.bz_quality)
+    [av, bv], observs = scan(modelf, band, 
+                            [(args.sl_min, args.sl_max, args.sl_n), 
+                             (args.disp_min, args.disp_max, args.disp_n)], 
+                            observables, spacing = 1 / args.bz_quality)
     fig = make_plot_scan_2d(av, "$V_{SL}$", bv, "$V_0$", observs)
     if args.title is not None:
         fig.suptitle(args.title)
-    return fig
+    data = {'av': av, 'bv': bv, 'observs': observs}
+    return fig, data
 
 def scang_sc(args):
     gs = {'gamma0': args.gamma0, 'gamma1': args.gamma1, 'gamma3': args.gamma3, 'gamma4': args.gamma4}
@@ -97,16 +102,18 @@ def scang_sc(args):
     
     band = band_from_offset(args)
     observables = [int_observables[id] for id in args.observables]
-    av, bv, observs = scan_2d(modelf, band,
-                        args.a_min, args.a_max, args.a_n,
-                        args.b_min, args.b_max, args.b_n,
-                        observables, spacing = 1 / args.bz_quality)
+    [av, bv], observs = scan(modelf, band,
+                            [(args.a_min, args.a_max, args.a_n),
+                             (args.b_min, args.b_max, args.b_n)],
+                            observables, spacing = 1 / args.bz_quality)
     fig = make_plot_scan_2d(av, f"$\\gamma_{args.gammas[0]}$", bv, f"$\\gamma_{args.gammas[1]}$", observs)
-    return fig
+    data = {'av': av, 'bv': bv, 'observs': observs}
+    return fig, data
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o', '--output-file', default=None)
+    parser.add_argument('-P', '--plot-file', default=None)
+    parser.add_argument('-D', '--data-file', default=None)
     parser.add_argument('-2', '--two-band', action='store_true')
     parser.add_argument('-r', '--radius', type=int, default=3)
     parser.add_argument('-s', '--scale', type=float, default=30.0)
@@ -126,7 +133,7 @@ if __name__ == '__main__':
     parser_single.add_argument('-sn', '--struct-res', type=int, default=100)
     parser_single.add_argument('-b', '--band-offset', type=int, default=0)
     parser_single.add_argument('-p', '--subplots', type=strlist, default="berry,trvioliso,trviolbycstruct")
-    parser_single.add_argument('-O', '--observables', type=strlist, default="chern,gap,width,trvioliso,berryfluc,berryflucn1")
+    parser_single.add_argument('-o', '--observables', type=strlist, default="chern,gap,width,trvioliso,berryfluc,berryflucn1")
     parser_single.set_defaults(func=bz_sc)
 
     parser_scan = subparsers.add_parser("scan")
@@ -138,7 +145,7 @@ if __name__ == '__main__':
     parser_scan.add_argument('disp_n', type=int)
     parser_scan.add_argument('-bq', '--bz-quality', type=int, default=10)
     parser_scan.add_argument('-b', '--band-offset', type=int, default=0)
-    parser_scan.add_argument('-O', '--observables', type=strlist, default="width,gap,chern,berryfluc,trvioliso")
+    parser_scan.add_argument('-o', '--observables', type=strlist, default="width,gap,chern,berryfluc,trvioliso")
     parser_scan.add_argument('-t', '--title')
     parser_scan.set_defaults(func=scan_sc)
 
@@ -153,14 +160,18 @@ if __name__ == '__main__':
     parser_scang.add_argument('b_max', type=float)
     parser_scang.add_argument('b_n', type=int)
     parser_scang.add_argument('-bq', '--bz-quality', type=int, default=10)
-    parser_scang.add_argument('-O', '--observables', type=strlist, default="width,gap,chern,trvioliso")
+    parser_scang.add_argument('-o', '--observables', type=strlist, default="width,gap,chern,trvioliso")
     parser_scang.add_argument('-b', '--band-offset', type=int, default=0)
     parser_scang.set_defaults(func=scang_sc)
 
     args = parser.parse_args()
-    fig = args.func(args)
+    fig, data = args.func(args)
 
-    if args.output_file is None:
+    if args.data_file is not None:
+        with open(args.data_file, 'wb') as f:
+            pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+
+    if args.plot_file is None:
         plt.show()
     else:
         fig.savefig(args.output_file)
