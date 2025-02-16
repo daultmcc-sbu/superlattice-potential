@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import ma
 from matplotlib.colors import BoundaryNorm, LogNorm, Normalize
 
 from .utilities import Register, complex_to_rgb, remove_outliers, tr_form_from_eigvec, tr_form_from_ratio
@@ -73,9 +74,21 @@ class ChernIntObservable(IntObservable):
     title = "Chern number"
     colormesh_opts = {'cmap': 'RdBu_r'}
 
+    def __init__(self, shape):
+        super().__init__(shape)
+        self.mask = np.zeros(shape, dtype=bool)
+
+    def update(self, i, bd):
+        super().update(i, bd)
+        if bd.gap < 1:
+            self.mask[i] = True
+
     @staticmethod
     def compute(bd):
         return bd.chern
+    
+    def plotting_data(self):
+        return ma.array(super().plotting_data(), mask=self.mask)
     
     def norm(self):
         return BoundaryNorm(boundaries=[-2.5,-1.5,-0.5,0.5,1.5,2.5], ncolors=256, extend='both')

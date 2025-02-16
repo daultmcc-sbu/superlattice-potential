@@ -20,6 +20,7 @@ def make_plot_scan_2d(av, alabel, bv, blabel, observs):
             ax.set_title(plot.title)
         ax.set_xlabel(alabel)
         ax.set_ylabel(blabel)
+        ax.set_facecolor('grey')
 
     # plt.subplots_adjust(bottom=0.05, left=0.05, right=0.95, top=0.90)
 

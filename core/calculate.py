@@ -35,13 +35,21 @@ def single_bands(model, n):
     Es = model.spectrum(ks[:,0], ks[:,1])
     return ts, hs_ts, Es
 
-def single_bz(model, band, zoom, bn):
+def single_square(model, band, zoom, bn):
     size = zoom * np.max(np.abs(model.lattice.trans @ np.array([1,1])))
     x = np.linspace(-size, size, bn)
     y = np.linspace(-size, size, bn)
     xv, yv = np.meshgrid(x, y, indexing='ij')
     in_bz = model.lattice.in_first_bz(xv,yv)
     return BandData(model, xv, yv, band, in_bz)
+
+def single_bz(model, band, spacing):
+    xf, yf = model.lattice.bz_grid(spacing)
+    bzsize = xf.size
+    xf = np.append(xf, model.lattice.hs_points[:,0])
+    yf = np.append(yf, model.lattice.hs_points[:,1])
+    in_bz = np.arange(xf.size) < bzsize
+    return BandData(model, xf, yf, band, in_bz)
 
 def scan(modelf, band, bounds, observs, spacing):
     m0 = modelf(*np.zeros(len(bounds)))
