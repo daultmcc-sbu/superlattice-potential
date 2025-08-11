@@ -6,14 +6,14 @@ class SuperlatticeModel(Model):
     def __init__(self, continuum, sl_potential, lattice, radius):
         self.continuum = continuum
         self.lattice = lattice
-        self.indices = lattice.indices(radius)
+        self.indices = lattice.indices_in_radius(radius)
         self.points = np.array([lattice.point_at(ind) for ind in self.indices])
         self.bands = continuum.bands * len(self.indices)
         self.dtype = continuum.dtype
         self.sl_potential = sl_potential.astype(self.dtype)
         if sl_potential.shape != (continuum.bands, continuum.bands):
             raise ValueError("sl_potential has incorrect shape")
-        
+
         zeros = np.zeros((continuum.bands, continuum.bands), dtype=self.dtype)
         self.sl_potential_hamiltonian = np.block([[
             self.sl_potential if lattice.is_adjacent(ind1,ind2) else zeros

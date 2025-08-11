@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import patches
@@ -11,9 +12,9 @@ from .utilities import Register, auto_subplots, tr_form_from_eigvec, complex_to_
 #### MAIN ####
 ##############
 
-def make_plot_single(bd, ts, hs_ts, Es, subplots):
+def make_plot_single(bd, ts, hs_ts, Es, subplots, buffer=None):
     fig, axs = auto_subplots(plt, len(subplots) + 1, size=4.5)
-    plot_bandstructure(bd.model, ts, hs_ts, Es, axs.flat[0], highlight=bd.band)
+    plot_bandstructure(bd.model, ts, hs_ts, Es, axs.flat[0], highlight=bd.band, buffer=buffer)
 
     subplots = [plot(bd) for plot in subplots]
     for plot, ax in zip(subplots, axs.flat[1:]):
@@ -21,20 +22,24 @@ def make_plot_single(bd, ts, hs_ts, Es, subplots):
 
     return fig
 
-def plot_bandstructure(model, ts, hs_ts, Es, ax, highlight=None):
+def plot_bandstructure(model, ts, hs_ts, Es, ax, highlight=None, buffer=None):
     ax.plot(ts, Es, c='k')
 
-    if highlight:
+    if highlight is not None:
         ax.plot(ts, Es[:,highlight], c='r')
         focus = highlight
     else:
         focus = np.argmax(Es[0] > 0)
 
-    focus_range = 1.2 * Es[:, focus-5:focus+6]
-    yscale = np.abs(focus_range).max()
-    ax.set_ylim(-yscale, yscale)
-    
-    labels = model.lattice.hs_labels
+    # focus_range = 1.2 * Es[:, focus-5:focus+6]
+    # focus_range = 1.2 * Es[:, focus]
+    # yscale = np.abs(focus_range).max()
+    # ax.set_ylim(-yscale, yscale)
+    if buffer is None:
+        buffer = Es[:, focus].max() - Es[:, focus].min()
+    ax.set_ylim(Es[:, focus].min() - buffer, Es[:, focus].max() + buffer)
+
+    labels = copy.copy(model.lattice.hs_labels)
     labels.append(labels[0])
     ax.set_xticks(ticks=hs_ts, labels=labels)
     for t in hs_ts:
@@ -42,8 +47,8 @@ def plot_bandstructure(model, ts, hs_ts, Es, ax, highlight=None):
 
     ax.set_title("Band structure")
     ax.set_ylabel("Energy")
-    
-    
+
+
 
 
 
@@ -58,10 +63,11 @@ class RegisterSingleSubplots(Register):
 
     def id_from_name(name):
         return name.removesuffix('SingleSubplot').lower()
-    
+
 class SingleSubplot(metaclass=RegisterSingleSubplots, register=False):
     colormesh_opts = {}
     colorbar = True
+    bz_outline = True
     title = None
     xlabel = r"$k_x$"
     ylabel = r"$k_y$"
@@ -69,6 +75,7 @@ class SingleSubplot(metaclass=RegisterSingleSubplots, register=False):
     def __init__(self, bd):
         self.xv = bd.xv
         self.yv = bd.yv
+        self.bz_verts = bd.model.lattice.bz_verts
         self.data = self.compute(bd)
 
     def cb_post(self, cb):
@@ -82,6 +89,8 @@ class SingleSubplot(metaclass=RegisterSingleSubplots, register=False):
         if self.colorbar:
             cb = fig.colorbar(mesh, ax=ax)
             self.cb_post(cb)
+        if self.bz_outline:
+            ax.add_patch(patches.Polygon(self.bz_verts, edgecolor='black', facecolor='none', linewidth=2))
         if self.title is not None:
             ax.set_title(self.title)
         if self.xlabel is not None:
@@ -111,6 +120,12 @@ class QmDetSingleSubplot(SingleSubplot):
 
     def compute(self, bd):
         return np.linalg.det(bd.qm)
+
+class QmTrSingleSubplot(SingleSubplot):
+    title = "Quantum metric trace"
+
+    def compute(self, bd):
+        return np.trace(bd.qm, axis1=-2, axis2=-1)
 
 class QgtEigvalSingleSubplot(SingleSubplot):
     title = "Minimum QGT eigval"
@@ -147,7 +162,7 @@ class TrViolAvgSingleSubplot(SingleSubplot):
     def compute(self, bd):
         form = tr_form_from_eigvec(bd.avg_qgt_eigvec)
         return bd.tr_viol(form)
-    
+
 class TrViolOptSingleSubplot(SingleSubplot):
     title = "Trace cond viol (opt)"
     colormesh_opts = {'cmap': 'plasma'}
@@ -155,7 +170,7 @@ class TrViolOptSingleSubplot(SingleSubplot):
     def compute(self, bd):
         form = tr_form_from_ratio(*bd.optimal_cstruct)
         return bd.tr_viol(form)
-    
+
 class CstructSingleSubplot(SingleSubplot):
     title = "Complex struct (min)"
     colorbar = False
@@ -163,7 +178,7 @@ class CstructSingleSubplot(SingleSubplot):
     def compute(self, bd):
         w = bd.qgt_eigvec
         return complex_to_rgb(w[...,1] / w[...,0])
-    
+
 class TrViolByCstructSingleSubplot(SingleSubplot):
     title = "Tr viol per cstruct"
     xlabel = r"$\Re [\omega_2/\omega_1]$"

@@ -22,6 +22,7 @@ class Path:
                 t -= self.dists[i]
             else:
                 return self.vertices[i] + self.diffs[i] * t / self.dists[i]
+        return self.vertices[-1]
 
     def points(self, n):
         ts = np.linspace(0, 1, n)

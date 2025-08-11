@@ -80,7 +80,7 @@ class ChernIntObservable(IntObservable):
 
     def update(self, i, bd):
         super().update(i, bd)
-        if bd.gap < 1:
+        if bd.gap < 1.5:
             self.mask[i] = True
 
     @staticmethod

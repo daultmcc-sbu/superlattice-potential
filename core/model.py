@@ -1,12 +1,14 @@
 import numpy as np
 
 class Model:
+    trivial_basis = True
+
     def spectrum(self, x, y):
         return np.linalg.eigvalsh(self.hamiltonian(x, y))
-    
+
     def eig(self, x, y):
         return np.linalg.eigh(self.hamiltonian(x, y))
-    
+
     def qgt(self, x, y, band, trans=np.array([[1e-5,0],[0,1e-5]])):
         a = trans[:,0]
         b = trans[:,1]
@@ -20,7 +22,7 @@ class Model:
         xf = x + diffs[...,0]
         yf = y + diffs[...,1]
         states = self.eig(xf, yf)
-        
+
         link = lambda i,j,k,l: np.vdot(states[i,j], states[k,l])
 
         phase = np.angle(link(0,0,1,0) * link(1,0,1,1) * link(1,1,0,1) * link(0,1,0,0))

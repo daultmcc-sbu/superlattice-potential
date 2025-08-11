@@ -9,6 +9,7 @@ import copy
 
 from core import *
 from models.graphene import BernalBLG2BandModel, BernalBLG4BandModel, LATTICE_CONST, GAMMA0, GAMMA1, GAMMA3, GAMMA4
+from models.tmd import TMDBilayerModel
 from models.superlattice import SuperlatticeModel
 
 
@@ -18,23 +19,38 @@ from models.superlattice import SuperlatticeModel
 
 ALPHA = 0.3
 
+# def make_model(sl_pot, disp_pot, length=30, radius=3, alpha=0.3, square=False, two_band=False, gamma0=GAMMA0, gamma1=GAMMA1, gamma3=GAMMA3, gamma4=GAMMA4, **kwargs):
+#         if square:
+#             lattice = SquareLattice(1)
+#             scale = 2 * np.pi / length
+#         else:
+#             lattice = TriangularLattice(1)
+#             scale = 4 * np.pi / np.sqrt(3) / length
+
+#         if not two_band:
+#             continuum = BernalBLG4BandModel(disp_pot, LATTICE_CONST * scale, gamma0, gamma1, gamma3, gamma4)
+#             sl_potential = np.diag(np.array([alpha * sl_pot, alpha * sl_pot, sl_pot, sl_pot], dtype=np.complex128))
+#         else:
+#             continuum = BernalBLG2BandModel(disp_pot, LATTICE_CONST * scale, gamma0, gamma1, gamma3, gamma4)
+#             sl_potential = np.diag(np.array([alpha * sl_pot, sl_pot], dtype=np.complex128))
+
+#         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
 def make_model(sl_pot, disp_pot, length=30, radius=3, alpha=0.3, square=False, two_band=False, gamma0=GAMMA0, gamma1=GAMMA1, gamma3=GAMMA3, gamma4=GAMMA4, **kwargs):
         if square:
-            lattice = SquareLattice(1)
-            scale = 2 * np.pi / length
+            lattice = SquareLattice(2 * np.pi / length)
         else:
-            lattice = TriangularLattice(1)
-            scale = 4 * np.pi / np.sqrt(3) / length
+            lattice = TriangularLattice(4 * np.pi / np.sqrt(3) / length)
 
-        if not two_band:
-            continuum = BernalBLG4BandModel(disp_pot, LATTICE_CONST * scale, gamma0, gamma1, gamma3, gamma4)
-            sl_potential = np.diag(np.array([alpha * sl_pot, alpha * sl_pot, sl_pot, sl_pot], dtype=np.complex128))
-        else:    
-            continuum = BernalBLG2BandModel(disp_pot, LATTICE_CONST * scale, gamma0, gamma1, gamma3, gamma4)
-            sl_potential = np.diag(np.array([alpha * sl_pot, sl_pot], dtype=np.complex128))
+        # if not two_band:
+        #     continuum = BernalBLG4BandModel(disp_pot, LATTICE_CONST, gamma0, gamma1, gamma3, gamma4)
+        #     sl_potential = np.diag(np.array([alpha * sl_pot, alpha * sl_pot, sl_pot, sl_pot], dtype=np.complex128))
+        # else:
+        #     continuum = BernalBLG2BandModel(disp_pot, LATTICE_CONST, gamma0, gamma1, gamma3, gamma4)
+        #     sl_potential = np.diag(np.array([alpha * sl_pot, sl_pot], dtype=np.complex128))
+        continuum = TMDBilayerModel(disp_pot)
+        sl_potential = np.diag(np.array([alpha * sl_pot, alpha * sl_pot, sl_pot, sl_pot], dtype=np.complex128))
 
         return SuperlatticeModel(continuum, sl_potential, lattice, radius)
-
 
 
 
@@ -43,6 +59,7 @@ def make_model(sl_pot, disp_pot, length=30, radius=3, alpha=0.3, square=False, t
 ###################
 
 def band_from_offset(args):
+    args = copy.copy(args)
     args.sl_pot = 0
     args.disp_pot = 0
     return int(make_model(**vars(args)).hamiltonian(0, 0).shape[0] / 2) + args.band_offset
@@ -77,12 +94,12 @@ def scan_sc(args):
         margs['sl_pot'] = sl_pot
         margs['disp_pot'] = disp_pot
         return make_model(**margs)
-    
+
     band = band_from_offset(args)
     observables = [int_observables[id] for id in args.observables]
-    [av, bv], observs = scan(modelf, band, 
-                            [(args.sl_min, args.sl_max, args.sl_n), 
-                             (args.disp_min, args.disp_max, args.disp_n)], 
+    [av, bv], observs = scan(modelf, band,
+                            [(args.sl_min, args.sl_max, args.sl_n),
+                             (args.disp_min, args.disp_max, args.disp_n)],
                             observables, spacing = 1 / args.bz_quality)
     fig = make_plot_scan_2d(av, "$V_{SL}$", bv, "$V_0$", observs)
     if args.title is not None:
@@ -117,9 +134,9 @@ def scanl_sc(args):
                     return np.infty
                 return -bd.gap
                 # return -bd.gap + 0.1 * bd.width + 0.3 * bd.int(bd.tr_viol_iso) + 0.2 * bd.berry_fluc
-            
+
             if args.global_width is None:
-                res = opt.minimize(neg_gap, np.array([sl_pot0, disp_pot0]), 
+                res = opt.minimize(neg_gap, np.array([sl_pot0, disp_pot0]),
                                 method='Nelder-Mead', options={'xatol': args.tolerance, 'fatol': args.tolerance})
             else:
                 width = args.global_width / l
@@ -140,10 +157,10 @@ def scanl_sc(args):
             margs['disp_pot'] = args.disp_pot_adj / l
             margs['length'] = l
             return make_model(**margs)
-    
+
     band = band_from_offset(args)
     observables = [int_observables[id] for id in args.observables]
-    [a], observs = scan(modelf, band, [(args.l_min, args.l_max, args.l_n)], 
+    [a], observs = scan(modelf, band, [(args.l_min, args.l_max, args.l_n)],
                         observables, spacing = 1 / args.bz_quality)
     fig = make_plot_scan_1d(a, "$L$", observs)
     if args.title is not None:
@@ -167,7 +184,7 @@ def scang_sc(args):
         margs[aid] = a
         margs[bid] = b
         return make_model(**margs)
-    
+
     band = band_from_offset(args)
     observables = [int_observables[id] for id in args.observables]
     [av, bv], observs = scan(modelf, band,
